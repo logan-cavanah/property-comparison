@@ -16,12 +16,31 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const router = useRouter();
 
+  const getErrorMessage = (errorCode: string) => {
+    switch (errorCode) {
+      case 'auth/invalid-credential':
+        return 'Invalid email or password. Please try again.';
+      case 'auth/email-already-in-use':
+        return 'This email is already registered. Please sign in instead.';
+      case 'auth/user-not-found':
+        return 'No account found with this email. Please sign up first.';
+      case 'auth/wrong-password':
+        return 'Incorrect password. Please try again.';
+      case 'auth/weak-password':
+        return 'Password should be at least 6 characters long.';
+      case 'auth/invalid-email':
+        return 'Please enter a valid email address.';
+      case 'auth/network-request-failed':
+        return 'Network error. Please check your internet connection and try again.';
+      default:
+        return 'An unexpected error occurred. Please try again.';
+    }
+  };
 
   const handleEmailAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
     setLoading(true);
-
 
     try {
       if (isSignUp) {
@@ -35,12 +54,17 @@ export default function LoginPage() {
       }
       router.push('/');
     } catch (err: any) {
-      setError(err.message || 'An error occurred during authentication');
+      const errorCode = err.code || '';
+      setError(getErrorMessage(errorCode));
+      
+      // If email is already in use, switch to sign in mode
+      if (errorCode === 'auth/email-already-in-use') {
+        setIsSignUp(false);
+      }
     } finally {
       setLoading(false);
     }
   };
-
 
   const handleGoogleSignIn = async () => {
     setError('');
@@ -53,12 +77,12 @@ export default function LoginPage() {
       await createUserDocument(userCredential.user);
       router.push('/');
     } catch (err: any) {
-      setError(err.message || 'An error occurred during Google authentication');
+      const errorCode = err.code || '';
+      setError(getErrorMessage(errorCode));
     } finally {
       setLoading(false);
     }
   };
-
 
   const createUserDocument = async (user: any) => {
     if (!user) return;
@@ -81,7 +105,6 @@ export default function LoginPage() {
       await setDoc(userRef, { lastLogin: serverTimestamp() }, { merge: true });
     }
   };
-
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
@@ -143,7 +166,6 @@ export default function LoginPage() {
             </div>
           </div>
 
-
           <div>
             <button
               type="submit"
@@ -164,7 +186,6 @@ export default function LoginPage() {
               <span className="px-2 bg-gray-50 text-gray-500">Or continue with</span>
             </div>
           </div>
-
 
           <div className="mt-6">
             <button
