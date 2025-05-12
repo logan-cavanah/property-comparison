@@ -1,9 +1,8 @@
-// app/layout.tsx
 import './globals.css';
 import { Inter } from 'next/font/google';
 import Link from 'next/link';
 import { Home, Plus, GitCompare, Trophy } from 'lucide-react';
-import { AuthProvider } from '@/src/lib/AuthContext';
+import { AuthProvider } from '@/lib/AuthContext';
 
 
 const inter = Inter({ subsets: ['latin'] });

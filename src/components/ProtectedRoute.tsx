@@ -1,10 +1,9 @@
-// src/components/ProtectedRoute.tsx
 'use client';
 
 
 import { useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { useAuth } from '@/src/lib/AuthContext';
+import { useAuth } from '@/lib/AuthContext';
 
 
 export default function ProtectedRoute({ children }: { children: React.ReactNode }) {

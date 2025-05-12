@@ -1,13 +1,12 @@
-// app/page.tsx
 'use client';
 
 
 import Link from 'next/link';
 import { Plus, GitCompare, Trophy } from 'lucide-react';
-import ProtectedRoute from '@/src/components/ProtectedRoute';
-import { useAuth } from '@/src/lib/AuthContext';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import { useAuth } from '@/lib/AuthContext';
 import { signOut } from 'firebase/auth';
-import { auth } from '@/src/lib/firebase';
+import { auth } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 
 

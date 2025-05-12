@@ -1,15 +1,12 @@
-// app/login/page.tsx
 'use client';
-
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
-import { auth, db } from '@/src/lib/firebase';
+import { auth, db } from '@/lib/firebase';
 import Link from 'next/link';
 import { FcGoogle } from 'react-icons/fc';
-
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
