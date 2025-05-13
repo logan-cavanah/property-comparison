@@ -20,3 +20,8 @@
    npm run dev
    ```
    - The app will be available at `http://localhost:3000`.
+
+5. **If you want some data in your firebase**
+- Run the app
+- Log in with google or email
+- Go to Zoopla or rightmove and copy a property URL and paste it into the "Add" section in the app.
