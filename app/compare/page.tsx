@@ -16,20 +16,45 @@ export default function Compare() {
   const [isComparing, setIsComparing] = useState(false);
   const [completedComparisons, setCompletedComparisons] = useState(0);
   const [totalComparisons, setTotalComparisons] = useState(0);
+  const [error, setError] = useState<string | null>(null);
   const [pairwiseMatrix, setPairwiseMatrix] = useState<{ matrix: { [a: string]: { [b: string]: string } }, propertyIds: string[], idToPropertyId: { [docId: string]: string } }>({ matrix: {}, propertyIds: [], idToPropertyId: {} });
 
   // Redirect if not authenticated
   useEffect(() => {
-    if (!authLoading && !user) {
-      router.push('/login');
-    }
+    let mounted = true;
+    
+    const checkAuth = async () => {
+      if (!authLoading && !user) {
+        if (mounted) {
+          router.push('/login');
+        }
+      }
+    };
+    
+    checkAuth();
+    
+    return () => {
+      mounted = false;
+    };
   }, [user, authLoading, router]);
+
+  // Add auth loading timeout
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (authLoading) {
+        setError('Authentication is taking longer than expected. Please try refreshing the page.');
+      }
+    }, 10000); // 10 second timeout
+    
+    return () => clearTimeout(timeout);
+  }, [authLoading]);
 
   const loadNextComparison = async () => {
     if (!user) return;
     
     try {
       setIsLoading(true);
+      setError(null);
       const pair = await getNextComparisonPair(user.uid);
       
       if (!pair) {
@@ -43,7 +68,9 @@ export default function Compare() {
       }
     } catch (error) {
       console.error('Error loading property pair:', error);
-      toast.error('Failed to load properties');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to load properties';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
@@ -53,20 +80,31 @@ export default function Compare() {
   const updatePairwiseMatrix = async () => {
     if (!user) return;
     
-    if (process.env.NODE_ENV !== 'production') {
-      const matrix = await getUserPairwiseRelations(user.uid);
-      setPairwiseMatrix(matrix);
+    try {
+      if (process.env.NODE_ENV !== 'production') {
+        const matrix = await getUserPairwiseRelations(user.uid);
+        setPairwiseMatrix(matrix);
+      }
+    } catch (error) {
+      console.error('Error updating pairwise matrix:', error);
+      // Don't show error to user for debug feature
     }
   };
 
   // Helper to calculate total comparisons
   const calculateTotalComparisons = async () => {
-    // For binary insertion sort, we need approximately n*log(n) comparisons
-    // This is a rough estimate
-    const response = await fetch('/api/properties/count');
-    if (response.ok) {
-      const { count } = await response.json();
-      setTotalComparisons(Math.ceil(count * Math.log2(count)));
+    try {
+      // For binary insertion sort, we need approximately n*log(n) comparisons
+      const response = await fetch('/api/properties/count');
+      if (response.ok) {
+        const { count } = await response.json();
+        setTotalComparisons(Math.ceil(count * Math.log2(count)));
+      } else {
+        throw new Error('Failed to get property count');
+      }
+    } catch (error) {
+      console.error('Error calculating total comparisons:', error);
+      // Don't show error to user for this non-critical feature
     }
   };
 
@@ -84,6 +122,7 @@ export default function Compare() {
     
     try {
       setIsComparing(true);
+      setError(null);
       await recordComparisonAndUpdateRankings(user.uid, winnerId, loserId);
       setCompletedComparisons(prev => prev + 1);
       toast.success('Comparison recorded! Loading next comparison...');
@@ -91,7 +130,9 @@ export default function Compare() {
       await updatePairwiseMatrix();
     } catch (error) {
       console.error('Error recording comparison:', error);
-      toast.error('Failed to record comparison');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to record comparison';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsComparing(false);
     }
@@ -102,6 +143,7 @@ export default function Compare() {
     
     try {
       setIsLoading(true);
+      setError(null);
       await resetUserComparisonsAndRankings(user.uid);
       setCompletedComparisons(0);
       toast.success('All comparisons and rankings have been reset!');
@@ -109,18 +151,44 @@ export default function Compare() {
       await updatePairwiseMatrix();
     } catch (error) {
       console.error('Error resetting comparisons:', error);
-      toast.error('Failed to reset comparisons');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to reset comparisons';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
 
   // If still loading auth or not authenticated, show loading
-  if (authLoading || !user) {
+  if (authLoading) {
     return (
       <div className="text-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-        <p className="mt-4 text-gray-600">Loading...</p>
+        <p className="mt-4 text-gray-600">Loading authentication...</p>
+      </div>
+    );
+  }
+
+  // Show error state if there's an error
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <div className="text-red-600 mb-4">
+          <svg className="w-12 h-12 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <h2 className="text-xl font-bold text-gray-800 mb-2">Something went wrong</h2>
+        <p className="text-gray-600 mb-4">{error}</p>
+        <button
+          onClick={() => {
+            setError(null);
+            loadNextComparison();
+          }}
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700"
+        >
+          Try Again
+        </button>
       </div>
     );
   }
