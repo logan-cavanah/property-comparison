@@ -527,21 +527,30 @@ export async function getGlobalRankings(): Promise<{ property: Property; rank: n
     propertiesSnapshot.docs.map(doc => [doc.id, { id: doc.id, ...doc.data() } as Property])
   );
   
-  // Get all user rankings
-  const userRankingsSnapshot = await getDocs(collection(db, 'userRankings'));
+  // Get all users
+  const usersSnapshot = await getDocs(collection(db, 'users'));
   const propertyScores = new Map<string, number[]>();
   
-  userRankingsSnapshot.forEach(doc => {
-    const ranking = doc.data() as UserRanking;
-    if (ranking.isComplete) {
-      ranking.orderedPropertyIds.forEach((propertyId, index) => {
-        if (!propertyScores.has(propertyId)) {
-          propertyScores.set(propertyId, []);
-        }
-        propertyScores.get(propertyId)!.push(index + 1);
-      });
-    }
-  });
+  // For each user, get their rankings
+  for (const userDoc of usersSnapshot.docs) {
+    const userId = userDoc.id;
+    const rankingsSnapshot = await getDocs(collection(db, `users/${userId}/rankings`));
+    
+    rankingsSnapshot.forEach(doc => {
+      const ranking = doc.data() as UserRanking;
+      if (ranking.isComplete) {
+        // Only include property IDs that still exist in the properties collection
+        ranking.orderedPropertyIds
+          .filter(propertyId => properties.has(propertyId))
+          .forEach((propertyId, index) => {
+            if (!propertyScores.has(propertyId)) {
+              propertyScores.set(propertyId, []);
+            }
+            propertyScores.get(propertyId)!.push(index + 1);
+          });
+      }
+    });
+  }
   
   // Calculate sum of ranks for each property
   const propertySums: { propertyId: string; totalScore: number; rankCount: number }[] = [];

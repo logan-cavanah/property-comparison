@@ -9,7 +9,7 @@ import { signOut } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { Property } from '@/lib/types';
-import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc, setDoc } from 'firebase/firestore';
 
 export default function Home() {
   const { user } = useAuth();
@@ -36,8 +36,14 @@ export default function Home() {
         if (!rankingsSnapshot.empty) {
           const ranking = rankingsSnapshot.docs[0].data();
           const orderedIds = ranking.orderedPropertyIds || [];
+          
+          // Filter out any property IDs that don't exist in allProperties
+          const validPropertyIds = orderedIds.filter((id: string) => 
+            allProperties.some(property => property.id === id)
+          );
+          
           setPersonalRankings(
-            orderedIds.map((id: string, index: number) => ({ id, rank: index + 1 }))
+            validPropertyIds.map((id: string, index: number) => ({ id, rank: index + 1 }))
           );
         }
       } catch (error) {
@@ -63,8 +69,34 @@ export default function Home() {
     if (!confirm('Are you sure you want to delete this property?')) return;
 
     try {
+      // Delete the property
       await deleteDoc(doc(db, 'properties', propertyId));
+
+      // Get all users to clean up their rankings
+      const usersSnapshot = await getDocs(collection(db, 'users'));
+      
+      // For each user, update their rankings to remove the deleted property
+      for (const userDoc of usersSnapshot.docs) {
+        const userId = userDoc.id;
+        const rankingsSnapshot = await getDocs(collection(db, `users/${userId}/rankings`));
+        
+        // Update each ranking document
+        for (const rankingDoc of rankingsSnapshot.docs) {
+          const ranking = rankingDoc.data();
+          const updatedOrderedIds = ranking.orderedPropertyIds.filter((id: string) => id !== propertyId);
+          
+          // Update the ranking document with the filtered IDs
+          await setDoc(doc(db, `users/${userId}/rankings`, rankingDoc.id), {
+            ...ranking,
+            orderedPropertyIds: updatedOrderedIds,
+            lastUpdated: Date.now()
+          });
+        }
+      }
+
+      // Update local state
       setProperties(properties.filter(p => p.id !== propertyId));
+      setPersonalRankings(personalRankings.filter(p => p.id !== propertyId));
     } catch (error) {
       console.error('Error deleting property:', error);
     }
