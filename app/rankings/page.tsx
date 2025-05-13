@@ -35,7 +35,7 @@ export default function Rankings() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
-      <h1 className="text-4xl font-extrabold mb-6 text-center text-gray-900">
+      <h1 className="text-4xl font-extrabold mb-6 text-center text-white-900">
         Global Property Rankings
       </h1>
       <p className="text-center text-gray-600 mb-8 font-medium">

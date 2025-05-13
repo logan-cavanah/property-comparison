@@ -115,12 +115,12 @@ export default function Home() {
     <ProtectedRoute>
       <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
         <div className="flex justify-between items-center">
-          <h1 className="text-4xl font-extrabold text-gray-900">
+          <h1 className="text-4xl font-extrabold text-white-900">
             Property Comparison Dashboard
           </h1>
           {user && (
             <div className="flex items-center space-x-4">
-              <span className="text-gray-700 font-medium">
+              <span className="text-white-700 font-medium">
                 {user.displayName || user.email}
               </span>
               <button
