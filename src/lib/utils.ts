@@ -543,42 +543,42 @@ export async function getGlobalRankings(): Promise<{ property: Property; rank: n
     }
   });
   
-  // Calculate average rank for each property
-  const propertyAverages: { propertyId: string; avgRank: number; rankCount: number }[] = [];
+  // Calculate sum of ranks for each property
+  const propertySums: { propertyId: string; totalScore: number; rankCount: number }[] = [];
   
   propertyScores.forEach((ranks, propertyId) => {
-    const avgRank = ranks.reduce((sum, rank) => sum + rank, 0) / ranks.length;
-    propertyAverages.push({
+    const totalScore = ranks.reduce((sum, rank) => sum + rank, 0);
+    propertySums.push({
       propertyId,
-      avgRank,
+      totalScore,
       rankCount: ranks.length
     });
-  });
-  
-  // Sort by average rank (lower is better)
-  propertyAverages.sort((a, b) => {
-    if (a.rankCount === 0 && b.rankCount === 0) return 0;
-    if (a.rankCount === 0) return 1;
-    if (b.rankCount === 0) return -1;
-    return a.avgRank - b.avgRank;
   });
   
   // Add properties that haven't been ranked yet
   properties.forEach((property, id) => {
     if (!propertyScores.has(id)) {
-      propertyAverages.push({
+      propertySums.push({
         propertyId: id,
-        avgRank: Number.MAX_VALUE,
+        totalScore: Number.MAX_VALUE,
         rankCount: 0
       });
     }
   });
   
+  // Sort by total score (lower is better)
+  propertySums.sort((a, b) => {
+    if (a.rankCount === 0 && b.rankCount === 0) return 0;
+    if (a.rankCount === 0) return 1;
+    if (b.rankCount === 0) return -1;
+    return a.totalScore - b.totalScore;
+  });
+  
   // Convert to final ranking format
-  return propertyAverages.map((item, index) => ({
+  return propertySums.map((item, index) => ({
     property: properties.get(item.propertyId)!,
     rank: index + 1,
-    score: item.avgRank === Number.MAX_VALUE ? 0 : item.avgRank
+    score: item.totalScore === Number.MAX_VALUE ? Number.MAX_VALUE : item.totalScore
   }));
 }
 
