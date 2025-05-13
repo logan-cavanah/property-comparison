@@ -5,8 +5,12 @@ import { getNextComparisonPair, recordComparisonAndUpdateRankings, resetUserComp
 import { Property } from '@/lib/types';
 import toast, { Toaster } from 'react-hot-toast';
 import { ExternalLink, Trophy, CheckCircle, ArrowRight, RefreshCw } from 'lucide-react';
+import { useAuth } from '@/lib/AuthContext';
+import { useRouter } from 'next/navigation';
 
 export default function Compare() {
+  const { user, loading: authLoading } = useAuth();
+  const router = useRouter();
   const [properties, setProperties] = useState<Property[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isComparing, setIsComparing] = useState(false);
@@ -14,10 +18,19 @@ export default function Compare() {
   const [totalComparisons, setTotalComparisons] = useState(0);
   const [pairwiseMatrix, setPairwiseMatrix] = useState<{ matrix: { [a: string]: { [b: string]: string } }, propertyIds: string[], idToPropertyId: { [docId: string]: string } }>({ matrix: {}, propertyIds: [], idToPropertyId: {} });
 
+  // Redirect if not authenticated
+  useEffect(() => {
+    if (!authLoading && !user) {
+      router.push('/login');
+    }
+  }, [user, authLoading, router]);
+
   const loadNextComparison = async () => {
+    if (!user) return;
+    
     try {
       setIsLoading(true);
-      const pair = await getNextComparisonPair('anonymous-user');
+      const pair = await getNextComparisonPair(user.uid);
       
       if (!pair) {
         // All comparisons are done
@@ -38,8 +51,10 @@ export default function Compare() {
 
   // Helper to fetch and update the pairwise matrix
   const updatePairwiseMatrix = async () => {
+    if (!user) return;
+    
     if (process.env.NODE_ENV !== 'production') {
-      const matrix = await getUserPairwiseRelations('anonymous-user');
+      const matrix = await getUserPairwiseRelations(user.uid);
       setPairwiseMatrix(matrix);
     }
   };
@@ -56,16 +71,20 @@ export default function Compare() {
   };
 
   useEffect(() => {
-    loadNextComparison();
-    calculateTotalComparisons();
-    updatePairwiseMatrix();
+    if (user) {
+      loadNextComparison();
+      calculateTotalComparisons();
+      updatePairwiseMatrix();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [user]);
 
   const handleChoice = async (winnerId: string, loserId: string) => {
+    if (!user) return;
+    
     try {
       setIsComparing(true);
-      await recordComparisonAndUpdateRankings('anonymous-user', winnerId, loserId);
+      await recordComparisonAndUpdateRankings(user.uid, winnerId, loserId);
       setCompletedComparisons(prev => prev + 1);
       toast.success('Comparison recorded! Loading next comparison...');
       await loadNextComparison();
@@ -79,9 +98,11 @@ export default function Compare() {
   };
 
   const handleReset = async () => {
+    if (!user) return;
+    
     try {
       setIsLoading(true);
-      await resetUserComparisonsAndRankings('anonymous-user');
+      await resetUserComparisonsAndRankings(user.uid);
       setCompletedComparisons(0);
       toast.success('All comparisons and rankings have been reset!');
       await loadNextComparison();
@@ -94,11 +115,12 @@ export default function Compare() {
     }
   };
 
-  if (isLoading) {
+  // If still loading auth or not authenticated, show loading
+  if (authLoading || !user) {
     return (
       <div className="text-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-        <p className="mt-4 text-gray-600">Loading next comparison...</p>
+        <p className="mt-4 text-gray-600">Loading...</p>
       </div>
     );
   }

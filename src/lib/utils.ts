@@ -9,7 +9,8 @@ import {
   writeBatch,
   runTransaction,
   deleteDoc,
-  setDoc
+  setDoc,
+  collectionGroup
 } from 'firebase/firestore';
 import { Property, UserComparison, UserRanking } from './types';
 
@@ -118,8 +119,7 @@ async function resetAllUserRankings() {
 
 async function getCurrentUserRanking(userId: string): Promise<UserRanking | null> {
   const rankingQuery = query(
-    collection(db, 'userRankings'),
-    where('userId', '==', userId)
+    collection(db, `users/${userId}/rankings`)
   );
   
   const rankingSnapshot = await getDocs(rankingQuery);
@@ -292,10 +292,7 @@ interface InsertionInfo {
 
 // Helper to build a win graph from all user comparisons
 async function buildWinGraph(userId: string): Promise<Map<string, Set<string>>> {
-  const comparisonsQuery = query(
-    collection(db, 'userComparisons'),
-    where('userId', '==', userId)
-  );
+  const comparisonsQuery = collection(db, `users/${userId}/comparisons`);
   const snapshot = await getDocs(comparisonsQuery);
   const winGraph = new Map<string, Set<string>>();
   snapshot.docs.forEach(doc => {
@@ -360,10 +357,7 @@ async function getComparisonBetween(
   property1Id: string,
   property2Id: string
 ): Promise<UserComparison | null> {
-  const comparisonQuery = query(
-    collection(db, 'userComparisons'),
-    where('userId', '==', userId)
-  );
+  const comparisonQuery = collection(db, `users/${userId}/comparisons`);
   
   const snapshot = await getDocs(comparisonQuery);
   
@@ -404,24 +398,24 @@ async function insertPropertyWithoutComparison(
 }
 
 // Record a comparison and update rankings using binary insertion sort
+// Record a comparison and update rankings using binary insertion sort
 export async function recordComparisonAndUpdateRankings(
   userId: string, 
   winnerId: string, 
   loserId: string
 ) {
   await runTransaction(db, async (transaction) => {
-    // Add the comparison
-    const comparisonRef = doc(collection(db, 'userComparisons'));
+    // Add the comparison to the user's subcollection
+    const comparisonRef = doc(collection(db, `users/${userId}/comparisons`));
     transaction.set(comparisonRef, {
       id: comparisonRef.id,
-      userId,
       winnerId,
       loserId,
       comparedAt: Date.now()
     });
     
     // Get current ranking
-    const rankingQuery = query(collection(db, 'userRankings'), where('userId', '==', userId));
+    const rankingQuery = collection(db, `users/${userId}/rankings`);
     const rankingSnapshot = await getDocs(rankingQuery);
     
     let currentRanking: UserRanking | null = null;
@@ -432,10 +426,9 @@ export async function recordComparisonAndUpdateRankings(
       currentRanking = { id: doc.id, ...doc.data() } as UserRanking;
       rankingRef = doc.ref;
     } else {
-      rankingRef = doc(collection(db, 'userRankings'));
+      rankingRef = doc(collection(db, `users/${userId}/rankings`));
       currentRanking = {
         id: rankingRef.id,
-        userId,
         orderedPropertyIds: [],
         lastUpdated: Date.now(),
         isComplete: false,
@@ -485,7 +478,6 @@ export async function recordComparisonAndUpdateRankings(
     
     // Update ranking
     transaction.set(rankingRef, {
-      userId,
       orderedPropertyIds: newOrderedIds,
       lastUpdated: Date.now(),
       isComplete,
@@ -560,10 +552,7 @@ export async function getGlobalRankings(): Promise<{ property: Property; rank: n
 export async function resetUserComparisonsAndRankings(userId: string) {
   try {
     // Delete all user comparisons
-    const comparisonsQuery = query(
-      collection(db, 'userComparisons'),
-      where('userId', '==', userId)
-    );
+    const comparisonsQuery = collection(db, `users/${userId}/comparisons`);
     const comparisonsSnapshot = await getDocs(comparisonsQuery);
     const batch = writeBatch(db);
     
@@ -572,10 +561,7 @@ export async function resetUserComparisonsAndRankings(userId: string) {
     });
     
     // Delete user ranking
-    const rankingQuery = query(
-      collection(db, 'userRankings'),
-      where('userId', '==', userId)
-    );
+    const rankingQuery = collection(db, `users/${userId}/rankings`);
     const rankingSnapshot = await getDocs(rankingQuery);
     
     rankingSnapshot.docs.forEach(doc => {
@@ -604,10 +590,7 @@ export async function getUserPairwiseRelations(userId: string): Promise<{
   });
 
   // Build win graph and direct comparison set
-  const comparisonsQuery = query(
-    collection(db, 'userComparisons'),
-    where('userId', '==', userId)
-  );
+  const comparisonsQuery = collection(db, `users/${userId}/comparisons`);
   const snapshot = await getDocs(comparisonsQuery);
   const winGraph = new Map<string, Set<string>>();
   const directSet = new Set<string>();
