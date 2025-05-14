@@ -6,7 +6,7 @@ import { Property } from '@/lib/types';
 import { ExternalLink, Trophy, Users, UserCheck, UserX } from 'lucide-react';
 
 export default function Rankings() {
-  const [rankings, setRankings] = useState<{ property: Property; rank: number; score: number }[]>([]);
+  const [rankings, setRankings] = useState<{ property: Property; rank: number; score: number; rankCount: number; totalUsers: number }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -33,20 +33,21 @@ export default function Rankings() {
     );
   }
 
-  const getRankingStatus = (score: number) => {
-    if (score === Number.MAX_VALUE) return 'none';
-    if (score > 10) return 'some'; // Arbitrary threshold, adjust as needed
-    return 'all';
+  const getRankingStatus = (rankCount: number, totalUsers: number) => {
+    if (totalUsers === 0) return 'none'; // Should ideally not happen if there are properties
+    if (rankCount === 0) return 'none';
+    if (rankCount === totalUsers) return 'all';
+    return 'some';
   };
 
   const getRankingStatusIcon = (status: string) => {
     switch (status) {
       case 'all':
-        return <UserCheck className="text-green-500" size={20} title="Ranked by all users" />;
+        return <UserCheck className="text-green-500" size={20} />;
       case 'some':
-        return <Users className="text-blue-500" size={20} title="Ranked by some users" />;
+        return <Users className="text-yellow-500" size={20} />;
       case 'none':
-        return <UserX className="text-gray-400" size={20} title="Not ranked by any users" />;
+        return <UserX className="text-gray-400" size={20} />;
       default:
         return null;
     }
@@ -79,7 +80,7 @@ export default function Rankings() {
           </thead>
           <tbody className="divide-y divide-gray-200">
             {rankings.map((item) => {
-              const status = getRankingStatus(item.score);
+              const status = getRankingStatus(item.rankCount, item.totalUsers);
               return (
                 <tr key={item.property.id} className="hover:bg-gray-50 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap">

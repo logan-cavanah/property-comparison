@@ -29,7 +29,7 @@ export async function getCurrentUserRanking(userId: string): Promise<UserRanking
 }
 
 // Get global rankings using sum of ranks method
-export async function getGlobalRankings(): Promise<{ property: Property; rank: number; score: number }[]> {
+export async function getGlobalRankings(): Promise<{ property: Property; rank: number; score: number; rankCount: number; totalUsers: number }[]> {
   // Get all properties
   const propertiesSnapshot = await getDocs(collection(db, 'properties'));
   const properties = new Map(
@@ -39,6 +39,7 @@ export async function getGlobalRankings(): Promise<{ property: Property; rank: n
   // Get all users
   const usersSnapshot = await getDocs(collection(db, 'users'));
   const propertyScores = new Map<string, number[]>();
+  const totalUsers = usersSnapshot.docs.length;
   
   // For each user, get their rankings
   for (const userDoc of usersSnapshot.docs) {
@@ -96,7 +97,9 @@ export async function getGlobalRankings(): Promise<{ property: Property; rank: n
   return propertySums.map((item, index) => ({
     property: properties.get(item.propertyId)!,
     rank: index + 1,
-    score: item.totalScore === Number.MAX_VALUE ? Number.MAX_VALUE : item.totalScore
+    score: item.totalScore === Number.MAX_VALUE ? Number.MAX_VALUE : item.totalScore,
+    rankCount: item.rankCount,
+    totalUsers: totalUsers
   }));
 }
 
