@@ -70,7 +70,7 @@ async function insertPropertyWithoutComparison(
   const totalProperties = propertiesSnapshot.size;
   
   // Update the ranking
-  const rankingRef = doc(db, 'userRankings', ranking.id!);
+  const rankingRef = doc(db, `users/${userId}/rankings/${ranking.id!}`);
   await setDoc(rankingRef, {
     userId,
     orderedPropertyIds: newOrderedIds,
