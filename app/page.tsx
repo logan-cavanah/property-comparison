@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Plus, Trash2, Trophy, ExternalLink } from 'lucide-react';
+import { Plus, Trash2, Trophy, ExternalLink, RefreshCw, AlertCircle } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/lib/AuthContext';
 import { signOut } from 'firebase/auth';
@@ -10,12 +10,14 @@ import { auth, db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { Property } from '@/lib/types';
 import { collection, getDocs, deleteDoc, doc, setDoc } from 'firebase/firestore';
+import { resetUserComparisonsAndRankings } from '@/lib/utils';
 
 export default function Home() {
   const { user } = useAuth();
   const router = useRouter();
   const [properties, setProperties] = useState<Property[]>([]);
   const [personalRankings, setPersonalRankings] = useState<{ id: string; rank: number }[]>([]);
+  const [unrankedProperties, setUnrankedProperties] = useState<Property[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -45,6 +47,13 @@ export default function Home() {
           setPersonalRankings(
             validPropertyIds.map((id: string, index: number) => ({ id, rank: index + 1 }))
           );
+
+          // Find unranked properties
+          const rankedIds = new Set(validPropertyIds);
+          setUnrankedProperties(allProperties.filter(property => !rankedIds.has(property.id)));
+        } else {
+          // If no rankings exist, all properties are unranked
+          setUnrankedProperties(allProperties);
         }
       } catch (error) {
         console.error('Error fetching data:', error);
@@ -97,8 +106,21 @@ export default function Home() {
       // Update local state
       setProperties(properties.filter(p => p.id !== propertyId));
       setPersonalRankings(personalRankings.filter(p => p.id !== propertyId));
+      setUnrankedProperties(unrankedProperties.filter(p => p.id !== propertyId));
     } catch (error) {
       console.error('Error deleting property:', error);
+    }
+  };
+
+  const handleReorderRankings = async () => {
+    if (!user) return;
+    if (!confirm('This will reset your current rankings. You will need to compare properties again. Continue?')) return;
+    
+    try {
+      await resetUserComparisonsAndRankings(user.uid);
+      router.push('/compare');
+    } catch (error) {
+      console.error('Error resetting rankings:', error);
     }
   };
 
@@ -133,64 +155,18 @@ export default function Home() {
           )}
         </div>
 
-        {/* Personal Rankings */}
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Your Rankings</h2>
-          {personalRankings.length === 0 ? (
-            <p className="text-gray-600 font-medium">
-              No rankings yet. Start comparing properties <Link href="/compare" className="text-blue-600 hover:underline">here</Link>.
+        {/* Unranked Properties */}
+        {unrankedProperties.length > 0 && (
+          <div className="bg-white rounded-xl shadow-lg p-6 border-2 border-yellow-400">
+            <div className="flex items-center mb-4">
+              <AlertCircle className="text-yellow-500 mr-2" size={24} />
+              <h2 className="text-2xl font-bold text-gray-900">New Properties to Rank!</h2>
+            </div>
+            <p className="text-gray-600 font-medium mb-4">
+              You have {unrankedProperties.length} new properties that need to be ranked. Start comparing them now!
             </p>
-          ) : (
-            <ul className="space-y-2">
-              {personalRankings.map((item) => {
-                const property = properties.find(p => p.id === item.id);
-                return (
-                  <li key={item.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg">
-                    <div className="flex items-center">
-                      {item.rank === 1 && <Trophy className="text-yellow-500 mr-2" size={18} />}
-                      {item.rank === 2 && <Trophy className="text-gray-400 mr-2" size={18} />}
-                      {item.rank === 3 && <Trophy className="text-yellow-700 mr-2" size={18} />}
-                      <span className="text-sm font-medium text-gray-900">
-                        {item.rank}. {property ? `${property.site}: ${property.propertyId}` : 'Unknown Property'}
-                      </span>
-                    </div>
-                    <a
-                      href={property?.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800"
-                    >
-                      <ExternalLink size={16} />
-                    </a>
-                  </li>
-                );
-              })}
-            </ul>
-          )}
-          <Link
-            href="/compare"
-            className="mt-4 inline-block bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
-          >
-            Compare More
-          </Link>
-        </div>
-
-        {/* Property List */}
-        <div className="bg-white rounded-xl shadow-lg p-6">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-2xl font-bold text-gray-900">All Properties</h2>
-            <Link
-              href="/add"
-              className="flex items-center bg-green-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-green-700 transition-colors"
-            >
-              <Plus size={18} className="mr-2" /> Add Property
-            </Link>
-          </div>
-          {properties.length === 0 ? (
-            <p className="text-gray-600 font-medium">No properties added yet.</p>
-          ) : (
-            <ul className="space-y-2">
-              {properties.map((property) => (
+            <ul className="space-y-2 mb-4">
+              {unrankedProperties.map((property) => (
                 <li key={property.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg">
                   <div>
                     <span className="text-sm font-medium text-gray-900">
@@ -217,7 +193,78 @@ export default function Home() {
                 </li>
               ))}
             </ul>
+            <Link
+              href="/compare"
+              className="inline-block bg-yellow-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-yellow-600 transition-colors"
+            >
+              Start Ranking
+            </Link>
+          </div>
+        )}
+
+        {/* Personal Rankings */}
+        <div className="bg-white rounded-xl shadow-lg p-6">
+          <h2 className="text-2xl font-bold text-gray-900 mb-4">Your Rankings</h2>
+          {personalRankings.length === 0 ? (
+            <p className="text-gray-600 font-medium">
+              No rankings yet. Start comparing properties <Link href="/compare" className="text-blue-600 hover:underline">here</Link>.
+            </p>
+          ) : (
+            <>
+              <ul className="space-y-2 mb-4">
+                {personalRankings.map((item) => {
+                  const property = properties.find(p => p.id === item.id);
+                  return (
+                    <li key={item.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg">
+                      <div className="flex items-center">
+                        {item.rank === 1 && <Trophy className="text-yellow-500 mr-2" size={18} />}
+                        {item.rank === 2 && <Trophy className="text-gray-400 mr-2" size={18} />}
+                        {item.rank === 3 && <Trophy className="text-yellow-700 mr-2" size={18} />}
+                        <div>
+                          <span className="text-sm font-medium text-gray-900">
+                            {item.rank}. {property ? `${property.site}: ${property.propertyId}` : 'Unknown Property'}
+                          </span>
+                          {property && <p className="text-sm text-gray-500">Added by {property.addedBy}</p>}
+                        </div>
+                      </div>
+                      <div className="flex items-center space-x-2">
+                        <a
+                          href={property?.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-blue-600 hover:text-blue-800"
+                        >
+                          <ExternalLink size={16} />
+                        </a>
+                        <button
+                          onClick={() => handleDeleteProperty(property?.id || '')}
+                          className="text-red-600 hover:text-red-800"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+              <button
+                onClick={handleReorderRankings}
+                className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+              >
+                <RefreshCw size={18} className="mr-2" /> Reorder Rankings
+              </button>
+            </>
           )}
+        </div>
+
+        {/* Add Property Button */}
+        <div className="flex justify-center">
+          <Link
+            href="/add"
+            className="flex items-center bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition-colors"
+          >
+            <Plus size={20} className="mr-2" /> Add New Property
+          </Link>
         </div>
       </div>
     </ProtectedRoute>
