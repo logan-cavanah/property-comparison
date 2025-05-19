@@ -171,6 +171,7 @@ export async function POST(request: Request) {
     // If in explore mode, just fetch and return all JSON data
     if (mode === 'explore') {
       try {
+        console.log('Starting explore mode for URL:', url);
         const response = await fetch(url, {
           headers: {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
@@ -187,63 +188,71 @@ export async function POST(request: Request) {
 
         const html = await response.text();
         const jsonData: Record<string, any> = {};
+        const scriptContents: Array<{index: number, content: string, length: number}> = [];
 
-        // Split HTML into script tags
-        const scriptTags = html.split('<script>');
+        // Properly extract script tags using regex
+        const scriptRegex = /<script[^>]*>([\s\S]*?)<\/script>/gi;
+        let match;
+        let index = 0;
         
-        for (const script of scriptTags) {
-          // Look for common patterns of JSON data in script tags
-          const patterns = [
-            /window\.([A-Za-z0-9_]+)\s*=\s*(\{.*?\});/,
-            /var\s+([A-Za-z0-9_]+)\s*=\s*(\{.*?\});/,
-            /const\s+([A-Za-z0-9_]+)\s*=\s*(\{.*?\});/,
-            /let\s+([A-Za-z0-9_]+)\s*=\s*(\{.*?\});/,
-            /__NEXT_DATA__\s*=\s*(\{.*?\})/,
-            /__PRELOADED_STATE__\s*=\s*(\{.*?\})/
-          ];
-
-          for (const pattern of patterns) {
-            const match = script.match(pattern);
-            if (match) {
-              try {
-                const varName = match[1] || `anonymousJson${Object.keys(jsonData).length}`;
-                const jsonStr = match[2] || match[1];
-                
-                // Use bracket counting to find complete JSON
-                let bracketCount = 0;
-                let jsonEnd = 0;
-                let foundStart = false;
-                
-                for (let i = 0; i < jsonStr.length; i++) {
-                  const char = jsonStr[i];
-                  if (char === '{') {
-                    bracketCount++;
-                    foundStart = true;
-                  } else if (char === '}') {
-                    bracketCount--;
-                    if (foundStart && bracketCount === 0) {
-                      jsonEnd = i + 1;
-                      break;
-                    }
-                  }
-                }
-                
-                if (jsonEnd > 0) {
-                  const completeJson = jsonStr.substring(0, jsonEnd);
-                  const parsed = JSON.parse(completeJson);
-                  jsonData[varName] = parsed;
-                }
-              } catch (e) {
-                // Skip invalid JSON
-                continue;
-              }
-            }
+        while ((match = scriptRegex.exec(html)) !== null) {
+          const content = match[1].trim();
+          if (content) {
+            scriptContents.push({
+              index: index++,
+              content,
+              length: content.length
+            });
           }
+        }
+
+        // Process each script tag
+        for (const script of scriptContents) {
+          const { content, index } = script;
+          
+          // Look for variable assignments
+          const varAssignments = content.match(/var\s+([A-Za-z0-9_]+)\s*=\s*([^;]+);/g) || [];
+          const constAssignments = content.match(/const\s+([A-Za-z0-9_]+)\s*=\s*([^;]+);/g) || [];
+          const letAssignments = content.match(/let\s+([A-Za-z0-9_]+)\s*=\s*([^;]+);/g) || [];
+          const windowAssignments = content.match(/window\.([A-Za-z0-9_]+)\s*=\s*([^;]+);/g) || [];
+
+          // Process each type of assignment
+          const processAssignments = (assignments: string[], prefix: string) => {
+            assignments.forEach(assignment => {
+              const match = assignment.match(new RegExp(`${prefix}\\s+([A-Za-z0-9_]+)\\s*=\\s*([^;]+);`));
+              if (match) {
+                const [_, varName, value] = match;
+                try {
+                  // Try to parse as JSON if it looks like an object
+                  if (value.trim().startsWith('{') || value.trim().startsWith('[')) {
+                    const jsonValue = JSON.parse(value);
+                    jsonData[`${prefix}_${varName}`] = jsonValue;
+                  } else {
+                    // Store as string if not JSON
+                    jsonData[`${prefix}_${varName}`] = value;
+                  }
+                } catch (e) {
+                  // Store as string if parsing fails
+                  jsonData[`${prefix}_${varName}`] = value;
+                }
+              }
+            });
+          };
+
+          processAssignments(varAssignments, 'var');
+          processAssignments(constAssignments, 'const');
+          processAssignments(letAssignments, 'let');
+          processAssignments(windowAssignments, 'window');
         }
 
         return NextResponse.json({
           url,
           detectedSite: detectSiteFromUrl(url),
+          scriptContents: scriptContents.map(s => ({
+            index: s.index,
+            preview: s.content.substring(0, 200),
+            length: s.length
+          })),
           extractedData: jsonData
         });
       } catch (error: unknown) {
