@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { getGlobalRankings } from '@/lib/utils';
 import { Property } from '@/lib/types';
-import { ExternalLink, Trophy, Users, UserCheck, UserX } from 'lucide-react';
+import { ExternalLink, Trophy, Users, UserCheck, UserX, Link } from 'lucide-react';
 
 export default function Rankings() {
   const [rankings, setRankings] = useState<{ property: Property; rank: number; score: number; rankCount: number; totalUsers: number }[]>([]);

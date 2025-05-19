@@ -1,7 +1,7 @@
 import './globals.css';
 import { Inter } from 'next/font/google';
 import Link from 'next/link';
-import { Home, Plus, GitCompare, Trophy, Download } from 'lucide-react';
+import { Home, Plus, GitCompare, Trophy, Download, RefreshCw } from 'lucide-react';
 import { AuthProvider } from '@/lib/AuthContext';
 
 
