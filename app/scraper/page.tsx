@@ -7,6 +7,7 @@ import { Property } from '@/lib/types';
 import { useAuth } from '@/lib/AuthContext';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { RefreshCw, Check, AlertCircle } from 'lucide-react';
+import JsonExplorer from './json-explorer';
 
 export default function PropertyScraper() {
   const { user } = useAuth();
@@ -20,14 +21,17 @@ export default function PropertyScraper() {
 
   const scrapeProperty = async (property: Property) => {
     try {
-      // This would be replaced with actual scraping logic
-      // For now, we'll simulate a scraping operation
+      // Call our enhanced scraper API
       const response = await fetch('/api/scrape-property', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ url: property.url, site: property.site }),
+        body: JSON.stringify({ 
+          url: property.url, 
+          site: property.site,
+          propertyId: property.propertyId 
+        }),
       });
 
       if (!response.ok) {
@@ -35,6 +39,10 @@ export default function PropertyScraper() {
       }
 
       const data = await response.json();
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
       
       // Update the property with scraped data
       await updateDoc(doc(db, 'properties', property.id), {
@@ -70,6 +78,14 @@ export default function PropertyScraper() {
       
       // Process properties sequentially to avoid rate limiting
       for (const property of properties) {
+        // Skip properties without a URL or site
+        if (!property.url || !property.site) {
+          results.skipped++;
+          results.messages.push(`Skipped ${property.id}: Missing URL or site information`);
+          setResults({ ...results });
+          continue;
+        }
+        
         const result = await scrapeProperty(property);
         
         if (result.success) {
@@ -131,6 +147,9 @@ export default function PropertyScraper() {
           </button>
         </div>
         
+        {/* Add the JSON Explorer component */}
+        <JsonExplorer />
+        
         {results.messages.length > 0 && (
           <div className="bg-white rounded-xl shadow-lg p-6">
             <div className="flex justify-between items-center mb-4">
@@ -144,6 +163,12 @@ export default function PropertyScraper() {
                   <AlertCircle size={18} className="text-red-500 mr-1" />
                   <span className="text-sm font-medium">{results.failed} Failed</span>
                 </div>
+                {results.skipped > 0 && (
+                  <div className="flex items-center">
+                    <AlertCircle size={18} className="text-yellow-500 mr-1" />
+                    <span className="text-sm font-medium">{results.skipped} Skipped</span>
+                  </div>
+                )}
               </div>
             </div>
             
@@ -155,7 +180,9 @@ export default function PropertyScraper() {
                     className={`p-2 rounded ${
                       message.includes('Successfully') 
                         ? 'bg-green-50 text-green-800' 
-                        : 'bg-red-50 text-red-800'
+                        : message.includes('Skipped')
+                          ? 'bg-yellow-50 text-yellow-800'
+                          : 'bg-red-50 text-red-800'
                     }`}
                   >
                     {message}
