@@ -234,82 +234,91 @@ export default function Home() {
 
         {/* Personal Rankings */}
         <div className="bg-white rounded-xl shadow-lg p-6">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Your Rankings</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">Your Rankings</h2>
           {personalRankings.length === 0 ? (
             <p className="text-gray-600 font-medium">
               No rankings yet. Start comparing properties <Link href="/compare" className="text-blue-600 hover:underline">here</Link>.
             </p>
           ) : (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
+              <div className="divide-y divide-gray-100">
                 {personalRankings.map((item) => {
                   const property = properties.find(p => p.id === item.id);
                   if (!property) return null;
                   
                   return (
-                    <Link href={`/property/${item.id}`} key={item.id}>
-                      <div className="bg-gray-50 rounded-lg overflow-hidden shadow hover:shadow-md transition-shadow cursor-pointer h-full relative">
-                        <div className="absolute top-0 left-0 bg-blue-600 text-white w-8 h-8 flex items-center justify-center font-bold z-10">
-                          {item.rank}
-                        </div>
-                        {item.rank <= 3 && (
-                          <div className="absolute top-2 right-2 z-10">
-                            <Trophy 
-                              className={
-                                item.rank === 1 ? "text-yellow-500" : 
-                                item.rank === 2 ? "text-gray-400" : 
-                                "text-yellow-700"
-                              } 
-                              size={24} 
-                            />
+                    <Link href={`/property/${item.id}`} key={item.id} className="block py-6 first:pt-0 last:pb-0">
+                      <div className="bg-gray-50 rounded-xl shadow-md hover:shadow-lg transition-all duration-200 cursor-pointer relative flex">
+                        <div className="flex-grow flex">
+                          <div className="w-48 h-32 flex-shrink-0 relative">
+                            {property.images && property.images.length > 0 ? (
+                              <img 
+                                src={property.images[0]} 
+                                alt={property.address || property.postcode || 'Property'} 
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="flex items-center justify-center h-full bg-gray-100">
+                                <HomeIcon size={32} className="text-gray-400" />
+                              </div>
+                            )}
                           </div>
-                        )}
-                        <div className="h-40 bg-gray-200 relative">
-                          {property.images && property.images.length > 0 ? (
-                            <img 
-                              src={property.images[0]} 
-                              alt={property.address || property.postcode || 'Property'} 
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="flex items-center justify-center h-full">
-                              <HomeIcon size={48} className="text-gray-400" />
+                          
+                          <div className="flex-grow p-4 flex flex-col justify-between">
+                            <div>
+                              <div className="flex items-center justify-between mb-2">
+                                <div className="flex items-center space-x-3">
+                                  <span className="text-2xl font-bold text-blue-600">
+                                    #{item.rank}
+                                  </span>
+                                  {item.rank <= 3 && (
+                                    <Trophy 
+                                      className={
+                                        item.rank === 1 ? "text-yellow-500" : 
+                                        item.rank === 2 ? "text-gray-400" : 
+                                        "text-yellow-700"
+                                      } 
+                                      size={24} 
+                                    />
+                                  )}
+                                  <h3 className="font-medium text-gray-900 text-lg">
+                                    {property.address || property.postcode || `${property.site}: ${property.propertyId}`}
+                                  </h3>
+                                </div>
+                                {property.price && (
+                                  <div className="flex items-center bg-blue-100 text-blue-800 px-3 py-1 rounded-full">
+                                    <PoundSterling size={16} className="mr-1" />
+                                    <span>{property.price} {property.priceFrequency || 'pcm'}</span>
+                                  </div>
+                                )}
+                              </div>
+                              
+                              <div className="flex items-center text-gray-600 text-sm mb-2">
+                                <MapPin size={14} className="mr-1" />
+                                <span>{property.postcode || 'Location not specified'}</span>
+                              </div>
                             </div>
-                          )}
-                          {property.price && (
-                            <div className="absolute bottom-0 left-0 bg-blue-600 text-white px-3 py-1 flex items-center">
-                              <PoundSterling size={16} className="mr-1" />
-                              <span>{property.price} {property.priceFrequency || 'pcm'}</span>
+                            
+                            <div className="flex items-center space-x-6 text-sm text-gray-700">
+                              {property.bedrooms && (
+                                <div className="flex items-center">
+                                  <Bed size={16} className="mr-1" />
+                                  <span>{property.bedrooms} beds</span>
+                                </div>
+                              )}
+                              {property.bathrooms && (
+                                <div className="flex items-center">
+                                  <Bath size={16} className="mr-1" />
+                                  <span>{property.bathrooms} baths</span>
+                                </div>
+                              )}
+                              {property.propertyType && (
+                                <div className="flex items-center">
+                                  <HomeIcon size={16} className="mr-1" />
+                                  <span>{property.propertyType}</span>
+                                </div>
+                              )}
                             </div>
-                          )}
-                        </div>
-                        <div className="p-4">
-                          <h3 className="font-medium text-gray-900 mb-1 truncate">
-                            {property.address || property.postcode || `${property.site}: ${property.propertyId}`}
-                          </h3>
-                          <div className="flex items-center text-gray-600 text-sm mb-2">
-                            <MapPin size={14} className="mr-1" />
-                            <span>{property.postcode || 'Location not specified'}</span>
-                          </div>
-                          <div className="flex items-center space-x-4 text-sm text-gray-700">
-                            {property.bedrooms && (
-                              <div className="flex items-center">
-                                <Bed size={14} className="mr-1" />
-                                <span>{property.bedrooms}</span>
-                              </div>
-                            )}
-                            {property.bathrooms && (
-                              <div className="flex items-center">
-                                <Bath size={14} className="mr-1" />
-                                <span>{property.bathrooms}</span>
-                              </div>
-                            )}
-                            {property.propertyType && (
-                              <div className="flex items-center">
-                                <HomeIcon size={14} className="mr-1" />
-                                <span>{property.propertyType}</span>
-                              </div>
-                            )}
                           </div>
                         </div>
                       </div>
@@ -319,7 +328,7 @@ export default function Home() {
               </div>
               <button
                 onClick={handleReorderRankings}
-                className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
+                className="mt-6 flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"
               >
                 <RefreshCw size={18} className="mr-2" /> Reorder Rankings
               </button>

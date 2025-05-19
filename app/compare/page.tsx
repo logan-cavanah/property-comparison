@@ -312,7 +312,7 @@ export default function Compare() {
           const currentImageIndex = activeImage[property.id] || 0;
           
           return (
-            <div key={property.id} className="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
+            <div key={property.id} className="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200 flex flex-col">
               <div className="p-4 border-b bg-gray-50">
                 <h3 className="text-xl font-bold text-center text-gray-900">
                   {property.address || property.postcode || `${property.site}: ${property.propertyId}`}
@@ -328,16 +328,34 @@ export default function Compare() {
                       alt={`Property image`} 
                       className="w-full h-full object-cover"
                     />
-                    {property.images.length > 1 && (
-                      <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 p-2 flex justify-center">
-                        {property.images.map((_, index) => (
-                          <button 
-                            key={index}
-                            onClick={() => changeActiveImage(property.id, index)}
-                            className={`w-3 h-3 rounded-full mx-1 ${index === currentImageIndex ? 'bg-white' : 'bg-gray-400'}`}
-                          />
-                        ))}
-                      </div>
+                    {property.images && property.images.length > 1 && (
+                      <>
+                        <button 
+                          onClick={() => changeActiveImage(property.id, (currentImageIndex - 1 + (property.images?.length || 0)) % (property.images?.length || 1))}
+                          className="absolute left-0 top-0 bottom-0 w-1/5 bg-gradient-to-r from-black/50 to-transparent hover:from-black/70 transition-all duration-200 flex items-center justify-start pl-2"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                          </svg>
+                        </button>
+                        <button 
+                          onClick={() => changeActiveImage(property.id, (currentImageIndex + 1) % (property.images?.length || 1))}
+                          className="absolute right-0 top-0 bottom-0 w-1/5 bg-gradient-to-l from-black/50 to-transparent hover:from-black/70 transition-all duration-200 flex items-center justify-end pr-2"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </button>
+                        <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 p-2 flex justify-center">
+                          {property.images.map((_, index) => (
+                            <button 
+                              key={index}
+                              onClick={() => changeActiveImage(property.id, index)}
+                              className={`w-2 h-2 rounded-full mx-1 transition-all duration-200 ${index === currentImageIndex ? 'bg-white scale-125' : 'bg-gray-400'}`}
+                            />
+                          ))}
+                        </div>
+                      </>
                     )}
                   </>
                 ) : (
@@ -348,13 +366,13 @@ export default function Compare() {
               </div>
               
               {/* Property Details */}
-              <div className="p-4">
+              <div className="p-4 flex flex-col flex-grow">
                 <div className="grid grid-cols-2 gap-4 mb-4">
                   <div className="flex items-center">
                     <PoundSterling className="text-blue-600 mr-2" size={18} />
                     <div>
-                      <p className="text-xs text-gray-600">Price</p>
-                      <p className="font-semibold">
+                      <p className="text-xs text-gray-900">Price</p>
+                      <p className="font-semibold text-gray-900">
                         {property.price ? `£${property.price} ${property.priceFrequency || 'pcm'}` : 'Not specified'}
                       </p>
                     </div>
@@ -363,40 +381,40 @@ export default function Compare() {
                   <div className="flex items-center">
                     <MapPin className="text-blue-600 mr-2" size={18} />
                     <div>
-                      <p className="text-xs text-gray-600">Location</p>
-                      <p className="font-semibold">{property.postcode || 'Not specified'}</p>
+                      <p className="text-xs text-gray-900">Location</p>
+                      <p className="font-semibold text-gray-900">{property.postcode || 'Not specified'}</p>
                     </div>
                   </div>
                   
                   <div className="flex items-center">
                     <Bed className="text-blue-600 mr-2" size={18} />
                     <div>
-                      <p className="text-xs text-gray-600">Bedrooms</p>
-                      <p className="font-semibold">{property.bedrooms || 'Not specified'}</p>
+                      <p className="text-xs text-gray-900">Bedrooms</p>
+                      <p className="font-semibold text-gray-900">{property.bedrooms || 'Not specified'}</p>
                     </div>
                   </div>
                   
                   <div className="flex items-center">
                     <Bath className="text-blue-600 mr-2" size={18} />
                     <div>
-                      <p className="text-xs text-gray-600">Bathrooms</p>
-                      <p className="font-semibold">{property.bathrooms || 'Not specified'}</p>
+                      <p className="text-xs text-gray-900">Bathrooms</p>
+                      <p className="font-semibold text-gray-900">{property.bathrooms || 'Not specified'}</p>
                     </div>
                   </div>
                   
                   <div className="flex items-center">
                     <Home className="text-blue-600 mr-2" size={18} />
                     <div>
-                      <p className="text-xs text-gray-600">Property Type</p>
-                      <p className="font-semibold">{property.propertyType || 'Not specified'}</p>
+                      <p className="text-xs text-gray-900">Property Type</p>
+                      <p className="font-semibold text-gray-900">{property.propertyType || 'Not specified'}</p>
                     </div>
                   </div>
                   
                   <div className="flex items-center">
                     <Calendar className="text-blue-600 mr-2" size={18} />
                     <div>
-                      <p className="text-xs text-gray-600">Available From</p>
-                      <p className="font-semibold">{property.availableFrom || 'Not specified'}</p>
+                      <p className="text-xs text-gray-900">Available From</p>
+                      <p className="font-semibold text-gray-900">{property.availableFrom || 'Not specified'}</p>
                     </div>
                   </div>
                 </div>
@@ -404,16 +422,16 @@ export default function Compare() {
                 {/* Description Preview */}
                 {property.description && (
                   <div className="mb-4">
-                    <p className="text-xs text-gray-600 mb-1">Description</p>
-                    <p className="text-sm text-gray-800 line-clamp-3">{property.description}</p>
+                    <p className="text-xs text-gray-900 mb-1">Description</p>
+                    <p className="text-sm text-gray-900 line-clamp-3">{property.description}</p>
                   </div>
                 )}
                 
                 {/* Features */}
                 {property.features && property.features.length > 0 && (
                   <div className="mb-4">
-                    <p className="text-xs text-gray-600 mb-1">Key Features</p>
-                    <ul className="text-sm text-gray-800 pl-5 list-disc">
+                    <p className="text-xs text-gray-900 mb-1">Key Features</p>
+                    <ul className="text-sm text-gray-900 pl-5 list-disc">
                       {property.features.slice(0, 3).map((feature, index) => (
                         <li key={index} className="line-clamp-1">{feature}</li>
                       ))}
@@ -424,12 +442,12 @@ export default function Compare() {
                   </div>
                 )}
                 
-                <div className="flex items-center justify-between">
+                <div className="mt-auto pt-4 space-y-3">
                   <a 
                     href={property.url} 
                     target="_blank" 
                     rel="noopener noreferrer"
-                    className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+                    className="text-blue-600 hover:text-blue-800 text-sm flex items-center justify-center"
                     onClick={(e) => e.stopPropagation()}
                   >
                     View on {property.site} <ExternalLink className="ml-1" size={14} />
@@ -438,7 +456,7 @@ export default function Compare() {
                   <button
                     onClick={() => handleChoice(property.id, properties.find(p => p.id !== property.id)!.id)}
                     disabled={isComparing}
-                    className="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="w-full bg-blue-600 text-white py-3 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed text-lg font-medium transition-colors"
                   >
                     Choose This Property
                   </button>

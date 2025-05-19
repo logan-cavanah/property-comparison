@@ -1,18 +1,21 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { useParams } from 'next/navigation';
-import { doc, getDoc } from 'firebase/firestore';
+import { useParams, useRouter } from 'next/navigation';
+import { doc, getDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Property } from '@/lib/types';
-import { ExternalLink, Calendar, Home, Bed, Bath, MapPin, PoundSterling, Info, Image } from 'lucide-react';
+import { ExternalLink, Calendar, Home, Bed, Bath, MapPin, PoundSterling, Info, Image, Trash2 } from 'lucide-react';
 import Link from 'next/link';
+import PropertyMap from '../../components/PropertyMap';
 
 export default function PropertyDetails() {
   const { id } = useParams();
+  const router = useRouter();
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState(0);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
     const fetchProperty = async () => {
@@ -32,6 +35,23 @@ export default function PropertyDetails() {
       fetchProperty();
     }
   }, [id]);
+
+  const handleDelete = async () => {
+    if (!confirm('Are you sure you want to delete this property? This action cannot be undone.')) {
+      return;
+    }
+
+    setIsDeleting(true);
+    try {
+      await deleteDoc(doc(db, 'properties', id as string));
+      router.push('/');
+    } catch (error) {
+      console.error('Error deleting property:', error);
+      alert('Failed to delete property. Please try again.');
+    } finally {
+      setIsDeleting(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -58,10 +78,18 @@ export default function PropertyDetails() {
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
-      <div className="mb-6">
+      <div className="mb-6 flex justify-between items-center">
         <Link href="/" className="text-blue-600 hover:underline">
           ← Back to Dashboard
         </Link>
+        <button
+          onClick={handleDelete}
+          disabled={isDeleting}
+          className="flex items-center bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50"
+        >
+          <Trash2 size={16} className="mr-2" />
+          {isDeleting ? 'Deleting...' : 'Delete Property'}
+        </button>
       </div>
 
       <div className="bg-white rounded-xl shadow-lg overflow-hidden">
@@ -174,6 +202,14 @@ export default function PropertyDetails() {
                 </div>
               </div>
             </div>
+
+            {/* Map Section */}
+            {property.postcode && (
+              <div className="mb-6">
+                <h3 className="font-bold mb-2 text-gray-900">Location</h3>
+                <PropertyMap postcode={property.postcode} address={property.address} />
+              </div>
+            )}
             
             <h3 className="font-bold mb-2 text-gray-900">Description</h3>
             <div className="bg-gray-50 p-4 rounded-lg mb-6">
