@@ -72,7 +72,7 @@ export default function PropertyDetails() {
               <h1 className="text-3xl font-bold text-gray-900">
                 {property.title || `${property.site}: ${property.propertyId}`}
               </h1>
-              <p className="text-gray-600 mt-1">{property.address || property.postcode || 'Address not available'}</p>
+              <p className="text-gray-800 mt-1">{property.address || property.postcode || 'Address not available'}</p>
             </div>
             <a
               href={property.url}
@@ -119,77 +119,77 @@ export default function PropertyDetails() {
         {/* Property Details */}
         <div className="p-6 grid grid-cols-1 md:grid-cols-3 gap-6">
           <div className="col-span-2">
-            <h2 className="text-xl font-bold mb-4 flex items-center">
-              <Info className="mr-2" size={20} /> Property Details
+            <h2 className="text-xl font-bold mb-4 flex items-center text-gray-900">
+              <Info className="mr-2 text-gray-900" size={20} /> Property Details
             </h2>
             
             <div className="grid grid-cols-2 gap-4 mb-6">
               <div className="flex items-center">
-                <PoundSterling className="text-gray-500 mr-2" size={20} />
+                <PoundSterling className="text-gray-700 mr-2" size={20} />
                 <div>
-                  <p className="text-sm text-gray-500">Price</p>
-                  <p className="font-semibold">
+                  <p className="text-sm text-gray-700">Price</p>
+                  <p className="font-semibold text-gray-900">
                     {property.price ? `£${property.price} ${property.priceFrequency || 'pcm'}` : 'Not specified'}
                   </p>
                 </div>
               </div>
               
               <div className="flex items-center">
-                <Home className="text-gray-500 mr-2" size={20} />
+                <Home className="text-gray-700 mr-2" size={20} />
                 <div>
-                  <p className="text-sm text-gray-500">Property Type</p>
-                  <p className="font-semibold">{property.propertyType || 'Not specified'}</p>
+                  <p className="text-sm text-gray-700">Property Type</p>
+                  <p className="font-semibold text-gray-900">{property.propertyType || 'Not specified'}</p>
                 </div>
               </div>
               
               <div className="flex items-center">
-                <Bed className="text-gray-500 mr-2" size={20} />
+                <Bed className="text-gray-700 mr-2" size={20} />
                 <div>
-                  <p className="text-sm text-gray-500">Bedrooms</p>
-                  <p className="font-semibold">{property.bedrooms || 'Not specified'}</p>
+                  <p className="text-sm text-gray-700">Bedrooms</p>
+                  <p className="font-semibold text-gray-900">{property.bedrooms || 'Not specified'}</p>
                 </div>
               </div>
               
               <div className="flex items-center">
-                <Bath className="text-gray-500 mr-2" size={20} />
+                <Bath className="text-gray-700 mr-2" size={20} />
                 <div>
-                  <p className="text-sm text-gray-500">Bathrooms</p>
-                  <p className="font-semibold">{property.bathrooms || 'Not specified'}</p>
+                  <p className="text-sm text-gray-700">Bathrooms</p>
+                  <p className="font-semibold text-gray-900">{property.bathrooms || 'Not specified'}</p>
                 </div>
               </div>
               
               <div className="flex items-center">
-                <MapPin className="text-gray-500 mr-2" size={20} />
+                <MapPin className="text-gray-700 mr-2" size={20} />
                 <div>
-                  <p className="text-sm text-gray-500">Postcode</p>
-                  <p className="font-semibold">{property.postcode || 'Not specified'}</p>
+                  <p className="text-sm text-gray-700">Postcode</p>
+                  <p className="font-semibold text-gray-900">{property.postcode || 'Not specified'}</p>
                 </div>
               </div>
               
               <div className="flex items-center">
-                <Calendar className="text-gray-500 mr-2" size={20} />
+                <Calendar className="text-gray-700 mr-2" size={20} />
                 <div>
-                  <p className="text-sm text-gray-500">Available From</p>
-                  <p className="font-semibold">{property.availableFrom || 'Not specified'}</p>
+                  <p className="text-sm text-gray-700">Available From</p>
+                  <p className="font-semibold text-gray-900">{property.availableFrom || 'Not specified'}</p>
                 </div>
               </div>
             </div>
             
-            <h3 className="font-bold mb-2">Description</h3>
+            <h3 className="font-bold mb-2 text-gray-900">Description</h3>
             <div className="bg-gray-50 p-4 rounded-lg mb-6">
               {property.description ? (
-                <p className="text-gray-700 whitespace-pre-line">{property.description}</p>
+                <p className="text-gray-800 whitespace-pre-line">{property.description}</p>
               ) : (
-                <p className="text-gray-500 italic">No description available</p>
+                <p className="text-gray-600 italic">No description available</p>
               )}
             </div>
             
             {property.features && property.features.length > 0 && (
               <>
-                <h3 className="font-bold mb-2">Features</h3>
+                <h3 className="font-bold mb-2 text-gray-900">Features</h3>
                 <ul className="list-disc list-inside bg-gray-50 p-4 rounded-lg mb-6">
                   {property.features.map((feature, index) => (
-                    <li key={index} className="text-gray-700">{feature}</li>
+                    <li key={index} className="text-gray-800">{feature}</li>
                   ))}
                 </ul>
               </>
@@ -197,29 +197,29 @@ export default function PropertyDetails() {
           </div>
           
           <div>
-            <h2 className="text-xl font-bold mb-4">Agent Information</h2>
+            <h2 className="text-xl font-bold mb-4 text-gray-900">Agent Information</h2>
             <div className="bg-gray-50 p-4 rounded-lg">
-              <p className="font-semibold">{property.agentName || 'Agent information not available'}</p>
+              <p className="font-semibold text-gray-900">{property.agentName || 'Agent information not available'}</p>
               {property.agentPhone && (
-                <p className="text-gray-700 mt-2">
+                <p className="text-gray-800 mt-2">
                   <span className="font-medium">Phone:</span> {property.agentPhone}
                 </p>
               )}
               {property.agentEmail && (
-                <p className="text-gray-700 mt-2">
+                <p className="text-gray-800 mt-2">
                   <span className="font-medium">Email:</span> {property.agentEmail}
                 </p>
               )}
             </div>
             
             <div className="mt-6">
-              <h2 className="text-xl font-bold mb-4">Property Added By</h2>
-              <p className="text-gray-700">{property.addedBy}</p>
-              <p className="text-gray-500 text-sm">
+              <h2 className="text-xl font-bold mb-4 text-gray-900">Property Added By</h2>
+              <p className="text-gray-800">{property.addedBy}</p>
+              <p className="text-gray-700 text-sm">
                 Added on {new Date(property.addedAt).toLocaleDateString()}
               </p>
               {property.lastScraped && (
-                <p className="text-gray-500 text-sm">
+                <p className="text-gray-700 text-sm">
                   Last scraped on {new Date(property.lastScraped).toLocaleDateString()}
                 </p>
               )}
