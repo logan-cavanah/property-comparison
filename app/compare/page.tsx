@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { getNextComparisonPair, recordComparisonAndUpdateRankings, resetUserComparisonsAndRankings, getUserPairwiseRelations } from '@/lib/utils';
 import { Property } from '@/lib/types';
 import toast, { Toaster } from 'react-hot-toast';
-import { ExternalLink, Trophy, CheckCircle, ArrowRight, RefreshCw } from 'lucide-react';
+import { ExternalLink, Trophy, CheckCircle, ArrowRight, RefreshCw, Bed, Bath, Home, PoundSterling, MapPin, Calendar, Info } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useRouter } from 'next/navigation';
 
@@ -18,6 +18,7 @@ export default function Compare() {
   const [totalComparisons, setTotalComparisons] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [pairwiseMatrix, setPairwiseMatrix] = useState<{ matrix: { [a: string]: { [b: string]: string } }, propertyIds: string[], idToPropertyId: { [docId: string]: string } }>({ matrix: {}, propertyIds: [], idToPropertyId: {} });
+  const [activeImage, setActiveImage] = useState<{[key: string]: number}>({});
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -76,6 +77,8 @@ export default function Compare() {
     }
   };
 
+  
+
   // Helper to fetch and update the pairwise matrix
   const updatePairwiseMatrix = async () => {
     if (!user) return;
@@ -128,6 +131,8 @@ export default function Compare() {
       toast.success('Comparison recorded! Loading next comparison...');
       await loadNextComparison();
       await updatePairwiseMatrix();
+      // Reset active images for new properties
+      setActiveImage({});
     } catch (error) {
       console.error('Error recording comparison:', error);
       const errorMessage = error instanceof Error ? error.message : 'Failed to record comparison';
@@ -260,8 +265,16 @@ export default function Compare() {
 
   const progress = totalComparisons > 0 ? Math.min(100, (completedComparisons / totalComparisons) * 100) : 0;
 
+  // Helper function to change active image
+  const changeActiveImage = (propertyId: string, index: number) => {
+    setActiveImage(prev => ({
+      ...prev,
+      [propertyId]: index
+    }));
+  };
+
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-6xl mx-auto px-4 py-8">
       <Toaster position="top-center" />
       <div className="flex justify-between items-center mb-6">
         <div>
@@ -294,43 +307,151 @@ export default function Compare() {
         </div>
       )}
       
-      <div className="grid md:grid-cols-2 gap-6">
-        {properties.map((property) => (
-          <div key={property.id} className="bg-white rounded-lg shadow-md overflow-hidden">
-            <div className="p-6">
-              <h3 className="text-lg font-bold mb-4 text-center text-gray-900">
-                {property.site}: <span className="font-bold text-black">{property.propertyId}</span>
-              </h3>
-              
-              <div className="text-center mb-6">
-                <a 
-                  href={property.url} 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className="inline-flex items-center text-blue-600 hover:text-blue-800"
-                >
-                  View Property <ExternalLink className="ml-2" size={16} />
-                </a>
+      <div className="grid md:grid-cols-2 gap-8">
+        {properties.map((property) => {
+          const currentImageIndex = activeImage[property.id] || 0;
+          
+          return (
+            <div key={property.id} className="bg-white rounded-lg shadow-lg overflow-hidden border border-gray-200">
+              <div className="p-4 border-b bg-gray-50">
+                <h3 className="text-xl font-bold text-center text-gray-900">
+                  {property.address || property.postcode || `${property.site}: ${property.propertyId}`}
+                </h3>
               </div>
               
-              <button
-                onClick={() => handleChoice(property.id, properties.find(p => p.id !== property.id)!.id)}
-                disabled={isComparing}
-                className="w-full bg-blue-600 text-white py-3 px-4 rounded hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                {isComparing ? 'Processing...' : 'Choose This Property'}
-              </button>
+              {/* Image Gallery */}
+              <div className="relative h-64 bg-gray-200">
+                {property.images && property.images.length > 0 ? (
+                  <>
+                    <img 
+                      src={property.images[currentImageIndex]} 
+                      alt={`Property image`} 
+                      className="w-full h-full object-cover"
+                    />
+                    {property.images.length > 1 && (
+                      <div className="absolute bottom-0 left-0 right-0 bg-black bg-opacity-50 p-2 flex justify-center">
+                        {property.images.map((_, index) => (
+                          <button 
+                            key={index}
+                            onClick={() => changeActiveImage(property.id, index)}
+                            className={`w-3 h-3 rounded-full mx-1 ${index === currentImageIndex ? 'bg-white' : 'bg-gray-400'}`}
+                          />
+                        ))}
+                      </div>
+                    )}
+                  </>
+                ) : (
+                  <div className="flex items-center justify-center h-full">
+                    <Home size={48} className="text-gray-400" />
+                  </div>
+                )}
+              </div>
+              
+              {/* Property Details */}
+              <div className="p-4">
+                <div className="grid grid-cols-2 gap-4 mb-4">
+                  <div className="flex items-center">
+                    <PoundSterling className="text-blue-600 mr-2" size={18} />
+                    <div>
+                      <p className="text-xs text-gray-600">Price</p>
+                      <p className="font-semibold">
+                        {property.price ? `£${property.price} ${property.priceFrequency || 'pcm'}` : 'Not specified'}
+                      </p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <MapPin className="text-blue-600 mr-2" size={18} />
+                    <div>
+                      <p className="text-xs text-gray-600">Location</p>
+                      <p className="font-semibold">{property.postcode || 'Not specified'}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <Bed className="text-blue-600 mr-2" size={18} />
+                    <div>
+                      <p className="text-xs text-gray-600">Bedrooms</p>
+                      <p className="font-semibold">{property.bedrooms || 'Not specified'}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <Bath className="text-blue-600 mr-2" size={18} />
+                    <div>
+                      <p className="text-xs text-gray-600">Bathrooms</p>
+                      <p className="font-semibold">{property.bathrooms || 'Not specified'}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <Home className="text-blue-600 mr-2" size={18} />
+                    <div>
+                      <p className="text-xs text-gray-600">Property Type</p>
+                      <p className="font-semibold">{property.propertyType || 'Not specified'}</p>
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center">
+                    <Calendar className="text-blue-600 mr-2" size={18} />
+                    <div>
+                      <p className="text-xs text-gray-600">Available From</p>
+                      <p className="font-semibold">{property.availableFrom || 'Not specified'}</p>
+                    </div>
+                  </div>
+                </div>
+                
+                {/* Description Preview */}
+                {property.description && (
+                  <div className="mb-4">
+                    <p className="text-xs text-gray-600 mb-1">Description</p>
+                    <p className="text-sm text-gray-800 line-clamp-3">{property.description}</p>
+                  </div>
+                )}
+                
+                {/* Features */}
+                {property.features && property.features.length > 0 && (
+                  <div className="mb-4">
+                    <p className="text-xs text-gray-600 mb-1">Key Features</p>
+                    <ul className="text-sm text-gray-800 pl-5 list-disc">
+                      {property.features.slice(0, 3).map((feature, index) => (
+                        <li key={index} className="line-clamp-1">{feature}</li>
+                      ))}
+                      {property.features.length > 3 && (
+                        <li className="text-blue-600">+{property.features.length - 3} more</li>
+                      )}
+                    </ul>
+                  </div>
+                )}
+                
+                <div className="flex items-center justify-between">
+                  <a 
+                    href={property.url} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className="text-blue-600 hover:text-blue-800 text-sm flex items-center"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    View on {property.site} <ExternalLink className="ml-1" size={14} />
+                  </a>
+                  
+                  <button
+                    onClick={() => handleChoice(property.id, properties.find(p => p.id !== property.id)!.id)}
+                    disabled={isComparing}
+                    className="bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Choose This Property
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
       
       <div className="text-center mt-8">
         <p className="text-sm text-gray-600">
           This comparison will help determine your property rankings
-        </p>
-        <p className="text-xs text-gray-500 mt-2">
-          Using binary insertion sort for efficient ranking
         </p>
       </div>
 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Plus, Trash2, Trophy, ExternalLink, RefreshCw, AlertCircle } from 'lucide-react';
+import { Plus, Trophy, RefreshCw, AlertCircle, Home, Bed, Bath, PoundSterling, MapPin } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/lib/AuthContext';
 import { signOut } from 'firebase/auth';
@@ -135,10 +135,10 @@ export default function Home() {
 
   return (
     <ProtectedRoute>
-      <div className="max-w-5xl mx-auto px-4 py-8 space-y-8">
+      <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
         <div className="flex justify-between items-center">
           <h1 className="text-4xl font-extrabold text-white-900">
-            Property Comparison Dashboard
+            Property Finder
           </h1>
           {user && (
             <div className="flex items-center space-x-4">
@@ -165,34 +165,64 @@ export default function Home() {
             <p className="text-gray-600 font-medium mb-4">
               You have {unrankedProperties.length} new properties that need to be ranked. Start comparing them now!
             </p>
-            <ul className="space-y-2 mb-4">
+            
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
               {unrankedProperties.map((property) => (
-                <li key={property.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg">
-                  <div>
-                    <Link href={`/property/${property.id}`} className="text-sm font-medium text-gray-900 hover:text-blue-600">
-                      {property.site}: {property.propertyId}
-                    </Link>
-                    <p className="text-sm text-gray-500">Added by {property.addedBy}</p>
+                <Link href={`/property/${property.id}`} key={property.id}>
+                  <div className="bg-gray-50 rounded-lg overflow-hidden shadow hover:shadow-md transition-shadow cursor-pointer h-full">
+                    <div className="h-40 bg-gray-200 relative">
+                      {property.images && property.images.length > 0 ? (
+                        <img 
+                          src={property.images[0]} 
+                          alt={property.address || property.postcode || 'Property'} 
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className="flex items-center justify-center h-full">
+                          <Home size={48} className="text-gray-400" />
+                        </div>
+                      )}
+                      {property.price && (
+                        <div className="absolute bottom-0 left-0 bg-blue-600 text-white px-3 py-1 flex items-center">
+                          <PoundSterling size={16} className="mr-1" />
+                          <span>{property.price} {property.priceFrequency || 'pcm'}</span>
+                        </div>
+                      )}
+                    </div>
+                    <div className="p-4">
+                      <h3 className="font-medium text-gray-900 mb-1 truncate">
+                        {property.address || property.postcode || `${property.site}: ${property.propertyId}`}
+                      </h3>
+                      <div className="flex items-center text-gray-600 text-sm mb-2">
+                        <MapPin size={14} className="mr-1" />
+                        <span>{property.postcode || 'Location not specified'}</span>
+                      </div>
+                      <div className="flex items-center space-x-4 text-sm text-gray-700">
+                        {property.bedrooms && (
+                          <div className="flex items-center">
+                            <Bed size={14} className="mr-1" />
+                            <span>{property.bedrooms}</span>
+                          </div>
+                        )}
+                        {property.bathrooms && (
+                          <div className="flex items-center">
+                            <Bath size={14} className="mr-1" />
+                            <span>{property.bathrooms}</span>
+                          </div>
+                        )}
+                        {property.propertyType && (
+                          <div className="flex items-center">
+                            <Home size={14} className="mr-1" />
+                            <span>{property.propertyType}</span>
+                          </div>
+                        )}
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <a
-                      href={property.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800"
-                    >
-                      <ExternalLink size={16} />
-                    </a>
-                    <button
-                      onClick={() => handleDeleteProperty(property.id)}
-                      className="text-red-600 hover:text-red-800"
-                    >
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                </li>
+                </Link>
               ))}
-            </ul>
+            </div>
+            
             <Link
               href="/compare"
               className="inline-block bg-yellow-500 text-white px-4 py-2 rounded-lg font-medium hover:bg-yellow-600 transition-colors"
@@ -211,42 +241,82 @@ export default function Home() {
             </p>
           ) : (
             <>
-              <ul className="space-y-2 mb-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">
                 {personalRankings.map((item) => {
                   const property = properties.find(p => p.id === item.id);
+                  if (!property) return null;
+                  
                   return (
-                    <li key={item.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg">
-                      <div className="flex items-center">
-                        {item.rank === 1 && <Trophy className="text-yellow-500 mr-2" size={18} />}
-                        {item.rank === 2 && <Trophy className="text-gray-400 mr-2" size={18} />}
-                        {item.rank === 3 && <Trophy className="text-yellow-700 mr-2" size={18} />}
-                        <div>
-                          <Link href={`/property/${item.id}`} className="text-sm font-medium text-gray-900 hover:text-blue-600">
-                            {item.rank}. {property ? `${property.site}: ${property.propertyId}` : 'Unknown Property'}
-                          </Link>
-                          {property && <p className="text-sm text-gray-500">Added by {property.addedBy}</p>}
+                    <Link href={`/property/${item.id}`} key={item.id}>
+                      <div className="bg-gray-50 rounded-lg overflow-hidden shadow hover:shadow-md transition-shadow cursor-pointer h-full relative">
+                        <div className="absolute top-0 left-0 bg-blue-600 text-white w-8 h-8 flex items-center justify-center font-bold z-10">
+                          {item.rank}
+                        </div>
+                        {item.rank <= 3 && (
+                          <div className="absolute top-2 right-2 z-10">
+                            <Trophy 
+                              className={
+                                item.rank === 1 ? "text-yellow-500" : 
+                                item.rank === 2 ? "text-gray-400" : 
+                                "text-yellow-700"
+                              } 
+                              size={24} 
+                            />
+                          </div>
+                        )}
+                        <div className="h-40 bg-gray-200 relative">
+                          {property.images && property.images.length > 0 ? (
+                            <img 
+                              src={property.images[0]} 
+                              alt={property.address || property.postcode || 'Property'} 
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <div className="flex items-center justify-center h-full">
+                              <Home size={48} className="text-gray-400" />
+                            </div>
+                          )}
+                          {property.price && (
+                            <div className="absolute bottom-0 left-0 bg-blue-600 text-white px-3 py-1 flex items-center">
+                              <PoundSterling size={16} className="mr-1" />
+                              <span>{property.price} {property.priceFrequency || 'pcm'}</span>
+                            </div>
+                          )}
+                        </div>
+                        <div className="p-4">
+                          <h3 className="font-medium text-gray-900 mb-1 truncate">
+                            {property.address || property.postcode || `${property.site}: ${property.propertyId}`}
+                          </h3>
+                          <div className="flex items-center text-gray-600 text-sm mb-2">
+                            <MapPin size={14} className="mr-1" />
+                            <span>{property.postcode || 'Location not specified'}</span>
+                          </div>
+                          <div className="flex items-center space-x-4 text-sm text-gray-700">
+                            {property.bedrooms && (
+                              <div className="flex items-center">
+                                <Bed size={14} className="mr-1" />
+                                <span>{property.bedrooms}</span>
+                              </div>
+                            )}
+                            {property.bathrooms && (
+                              <div className="flex items-center">
+                                <Bath size={14} className="mr-1" />
+                                <span>{property.bathrooms}</span>
+                              </div>
+                            )}
+                            {property.propertyType && (
+                              <div className="flex items-center">
+                                <Home size={14} className="mr-1" />
+                                <span>{property.propertyType}</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
                       </div>
-                      <div className="flex items-center space-x-2">
-                        <a
-                          href={property?.url}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="text-blue-600 hover:text-blue-800"
-                        >
-                          <ExternalLink size={16} />
-                        </a>
-                        <button
-                          onClick={() => handleDeleteProperty(property?.id || '')}
-                          className="text-red-600 hover:text-red-800"
-                        >
-                          <Trash2 size={16} />
-                        </button>
-                      </div>
-                    </li>
+                    </Link>
                   );
                 })}
-              </ul>
+              </div>
               <button
                 onClick={handleReorderRankings}
                 className="flex items-center bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors"

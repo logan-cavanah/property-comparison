@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { getGlobalRankings } from '@/lib/utils';
 import { Property } from '@/lib/types';
-import { ExternalLink, Trophy, Users, UserCheck, UserX } from 'lucide-react';
+import { Trophy, Users, UserCheck, UserX, Bed, Bath, Home, PoundSterling, MapPin } from 'lucide-react';
 import Link from 'next/link';
 
 export default function Rankings() {
@@ -55,7 +55,7 @@ export default function Rankings() {
   };
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className="max-w-6xl mx-auto px-4 py-8">
       <h1 className="text-4xl font-extrabold mb-6 text-center text-white-900">
         Global Property Rankings
       </h1>
@@ -63,73 +63,93 @@ export default function Rankings() {
         Aggregate rankings based on all user comparisons
       </p>
       
-      <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-        <table className="w-full text-left">
-          <thead className="bg-gray-100">
-            <tr>
-              <th className="px-6 py-4 text-sm font-semibold text-gray-700 uppercase tracking-wider">
-                Rank
-              </th>
-              <th className="px-6 py-4 text-sm font-semibold text-gray-700 uppercase tracking-wider">
-                Property
-              </th>
-              <th className="px-6 py-4 text-sm font-semibold text-gray-700 uppercase tracking-wider text-right">
-                Ranking Status
-              </th>
-              <th className="w-12"></th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-gray-200">
-            {rankings.map((item) => {
-              const status = getRankingStatus(item.rankCount, item.totalUsers);
-              return (
-                <tr key={item.property.id} className="hover:bg-gray-50 transition-colors">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      {item.rank === 1 && <Trophy className="text-yellow-500 mr-2" size={20} />}
-                      {item.rank === 2 && <Trophy className="text-gray-400 mr-2" size={20} />}
-                      {item.rank === 3 && <Trophy className="text-yellow-700 mr-2" size={20} />}
-                      <span className="text-sm font-semibold text-gray-900">{item.rank}</span>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {rankings.map((item) => {
+          const status = getRankingStatus(item.rankCount, item.totalUsers);
+          return (
+            <Link href={`/property/${item.property.id}`} key={item.property.id}>
+              <div className="bg-white rounded-xl shadow-lg overflow-hidden hover:shadow-xl transition-shadow cursor-pointer h-full relative">
+                <div className="absolute top-0 left-0 bg-blue-600 text-white w-10 h-10 flex items-center justify-center font-bold z-10 text-lg">
+                  {item.rank}
+                </div>
+                {item.rank <= 3 && (
+                  <div className="absolute top-2 right-2 z-10">
+                    <Trophy 
+                      className={
+                        item.rank === 1 ? "text-yellow-500" : 
+                        item.rank === 2 ? "text-gray-400" : 
+                        "text-yellow-700"
+                      } 
+                      size={28} 
+                    />
+                  </div>
+                )}
+                <div className="absolute top-2 right-12 z-10 group">
+                  {getRankingStatusIcon(status)}
+                  <div className="absolute bottom-full right-0 mb-2 w-48 bg-gray-800 text-white text-xs rounded p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
+                    {status === 'all' && 'Ranked by all users'}
+                    {status === 'some' && 'Ranked by some users'}
+                    {status === 'none' && 'Not ranked by any users'}
+                  </div>
+                </div>
+                <div className="h-48 bg-gray-200 relative">
+                  {item.property.images && item.property.images.length > 0 ? (
+                    <img 
+                      src={item.property.images[0]} 
+                      alt={item.property.address || item.property.postcode || 'Property'} 
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="flex items-center justify-center h-full">
+                      <Home size={48} className="text-gray-400" />
                     </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <Link href={`/property/${item.property.id}`} className="text-sm font-medium text-gray-900 hover:text-blue-600">
-                      {item.property.site}: {item.property.propertyId}
-                    </Link>
-                    <div className="text-sm text-gray-500">
-                      Added by {item.property.addedBy}
+                  )}
+                  {item.property.price && (
+                    <div className="absolute bottom-0 left-0 bg-blue-600 text-white px-3 py-1 flex items-center">
+                      <PoundSterling size={16} className="mr-1" />
+                      <span>{item.property.price} {item.property.priceFrequency || 'pcm'}</span>
                     </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right">
-                    <div className="flex justify-end items-center">
-                      <div className="group relative">
-                        {getRankingStatusIcon(status)}
-                        <div className="absolute bottom-full right-0 mb-2 w-48 bg-gray-800 text-white text-xs rounded p-2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 pointer-events-none">
-                          {status === 'all' && 'Ranked by all users'}
-                          {status === 'some' && 'Ranked by some users'}
-                          {status === 'none' && 'Not ranked by any users'}
-                        </div>
+                  )}
+                </div>
+                <div className="p-4">
+                  <h3 className="font-medium text-gray-900 mb-2 truncate">
+                    {item.property.address || item.property.postcode || `${item.property.site}: ${item.property.propertyId}`}
+                  </h3>
+                  <div className="flex items-center text-gray-600 text-sm mb-3">
+                    <MapPin size={14} className="mr-1" />
+                    <span>{item.property.postcode || 'Location not specified'}</span>
+                  </div>
+                  <div className="flex items-center space-x-4 text-sm text-gray-700">
+                    {item.property.bedrooms && (
+                      <div className="flex items-center">
+                        <Bed size={14} className="mr-1" />
+                        <span>{item.property.bedrooms}</span>
                       </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right">
-                    <a
-                      href={item.property.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-600 hover:text-blue-800 transition-colors"
-                    >
-                      <ExternalLink size={16} />
-                    </a>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+                    )}
+                    {item.property.bathrooms && (
+                      <div className="flex items-center">
+                        <Bath size={14} className="mr-1" />
+                        <span>{item.property.bathrooms}</span>
+                      </div>
+                    )}
+                    {item.property.propertyType && (
+                      <div className="flex items-center">
+                        <Home size={14} className="mr-1" />
+                        <span>{item.property.propertyType}</span>
+                      </div>
+                    )}
+                  </div>
+                  <div className="mt-3 text-xs text-gray-500">
+                    Added by {item.property.addedBy}
+                  </div>
+                </div>
+              </div>
+            </Link>
+          );
+        })}
       </div>
       
-      <div className="mt-6 text-center text-sm text-gray-600 font-medium">
+      <div className="mt-8 text-center text-sm text-gray-600 font-medium">
         <p>Rankings are based on aggregate user comparisons</p>
         <p>Hover over the status icon to see ranking details</p>
       </div>
