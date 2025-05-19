@@ -70,34 +70,6 @@ export async function POST(request: Request) {
         };
         break;
         
-      case 'SpareRoom':
-        mockData = {
-          ...mockData,
-          price: 800,
-          priceFrequency: 'pcm',
-          bedrooms: 1,
-          bathrooms: 1,
-          postcode: 'N1 9GU',
-          address: '789 Test Avenue, London',
-          propertyType: 'Room in shared house',
-          furnished: 'Fully Furnished',
-          availableFrom: 'Immediately',
-          deposit: 800,
-          agentName: 'SpareRoom Private Landlord',
-          agentEmail: 'landlord@example.com',
-          features: [
-            'Bills included',
-            'Shared kitchen',
-            'Washing machine',
-            'Broadband included'
-          ],
-          images: [
-            'https://assets.spareroom.co.uk/img/spareroom/property/123456_1.jpg',
-            'https://assets.spareroom.co.uk/img/spareroom/property/123456_2.jpg'
-          ]
-        };
-        break;
-        
       default:
         // Generic mock data for other sites
         mockData = {
