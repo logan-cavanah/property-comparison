@@ -2,24 +2,95 @@ import { NextResponse } from 'next/server';
 import axios from 'axios';
 import * as cheerio from 'cheerio';
 
+// Define interfaces for our data structures
+interface PropertyData {
+  text?: {
+    propertyPhrase?: string;
+    description?: string;
+  };
+  prices?: {
+    primaryPrice?: string;
+  };
+  bedrooms?: number;
+  bathrooms?: number;
+  address?: {
+    outcode?: string;
+    incode?: string;
+    displayAddress?: string;
+  };
+  propertySubType?: string;
+  lettings?: {
+    furnishType?: string;
+    letAvailableDate?: string;
+    deposit?: number;
+  };
+  customer?: {
+    companyName?: string;
+  };
+  contactInfo?: {
+    telephoneNumbers?: {
+      localNumber?: string;
+    };
+  };
+  keyFeatures?: string[];
+  images?: Array<{ url: string }>;
+  sizings?: Array<{
+    unit: string;
+    maximumSize?: number;
+  }>;
+  location?: {
+    latitude?: number;
+    longitude?: number;
+  };
+  id?: string;
+}
+
+interface PageModel {
+  propertyData: PropertyData;
+}
+
 // Helper function to extract JSON from script tags
-const extractJsonFromHtml = (html: string, jsonVariableName: string = 'PAGE_MODEL') => {
+const extractJsonFromHtml = (html: string, jsonVariableName: string = 'PAGE_MODEL'): PageModel | null => {
   try {
     const $ = cheerio.load(html);
-    
-    // Look for script tags that might contain our JSON data
-    let jsonData = null;
+    let jsonData: PageModel | null = null;
     
     $('script').each((_, script) => {
       const content = $(script).html() || '';
       
-      // Look for the specific variable assignment pattern
-      const pattern = new RegExp(`window\\.${jsonVariableName}\\s*=\\s*(\\{.*?\\});`, 's');
-      const match = content.match(pattern);
-      
-      if (match && match[1]) {
+      // Find the script containing our target variable
+      if (content.includes(`window.${jsonVariableName}`)) {
+        const pageModelStart = content.indexOf(`window.${jsonVariableName} =`);
+        if (pageModelStart === -1) return;
+        
+        // Find the end of the JSON object by counting brackets
+        let bracketCount = 0;
+        let jsonEnd = pageModelStart;
+        let foundStart = false;
+        
+        for (let i = pageModelStart; i < content.length; i++) {
+          const char = content[i];
+          if (char === '{') {
+            bracketCount++;
+            foundStart = true;
+          } else if (char === '}') {
+            bracketCount--;
+            if (foundStart && bracketCount === 0) {
+              jsonEnd = i + 1;
+              break;
+            }
+          }
+        }
+        
+        if (jsonEnd === pageModelStart) return;
+        
+        const jsonStr = content.substring(
+          pageModelStart + `window.${jsonVariableName} =`.length,
+          jsonEnd
+        ).trim();
+        
         try {
-          jsonData = JSON.parse(match[1]);
+          jsonData = JSON.parse(jsonStr) as PageModel;
           return false; // Break the loop once we find it
         } catch (e) {
           // Continue looking if this wasn't valid JSON
@@ -37,7 +108,15 @@ const extractJsonFromHtml = (html: string, jsonVariableName: string = 'PAGE_MODE
 // Function to scrape Rightmove property
 const scrapeRightmove = async (url: string) => {
   try {
-    const response = await axios.get(url);
+    const response = await axios.get(url, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.5',
+        'Connection': 'keep-alive',
+        'Upgrade-Insecure-Requests': '1'
+      }
+    });
     const pageModel = extractJsonFromHtml(response.data);
     
     if (!pageModel || !pageModel.propertyData) {
@@ -49,7 +128,7 @@ const scrapeRightmove = async (url: string) => {
     return {
       title: data.text?.propertyPhrase || '',
       description: data.text?.description?.replace(/<br\s*\/?>/g, '\n') || '',
-      price: parseInt(data.prices?.primaryPrice?.replace(/[^0-9]/g, '')) || 0,
+      price: parseInt(data.prices?.primaryPrice?.replace(/[^0-9]/g, '') ?? '0') || 0,
       priceFrequency: data.prices?.primaryPrice?.includes('pcm') ? 'pcm' : 
                       data.prices?.primaryPrice?.includes('pw') ? 'pw' : '',
       bedrooms: data.bedrooms || 0,
@@ -64,8 +143,8 @@ const scrapeRightmove = async (url: string) => {
       agentName: data.customer?.companyName || '',
       agentPhone: data.contactInfo?.telephoneNumbers?.localNumber || '',
       features: data.keyFeatures || [],
-      images: data.images?.map(img => img.url) || [],
-      floorArea: data.sizings?.find(s => s.unit === 'sqft')?.maximumSize || 0,
+      images: data.images?.map((img: { url: string }) => img.url) || [],
+      floorArea: data.sizings?.find((s: { unit: string }) => s.unit === 'sqft')?.maximumSize || 0,
       floorAreaUnit: 'sq ft',
       latitude: data.location?.latitude || 0,
       longitude: data.location?.longitude || 0,
@@ -79,7 +158,7 @@ const scrapeRightmove = async (url: string) => {
 };
 
 // Function to detect site from URL
-const detectSiteFromUrl = (url: string) => {
+const detectSiteFromUrl = (url: string): string => {
   if (url.includes('rightmove.co.uk')) return 'Rightmove';
   if (url.includes('zoopla.co.uk')) return 'Zoopla';
   return 'Unknown';
@@ -92,49 +171,85 @@ export async function POST(request: Request) {
     // If in explore mode, just fetch and return all JSON data
     if (mode === 'explore') {
       try {
-        const response = await axios.get(url);
-        const $ = cheerio.load(response.data);
-        
-        // Extract all potential JSON data from script tags
+        const response = await fetch(url, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+            'Accept-Language': 'en-US,en;q=0.5',
+            'Connection': 'keep-alive',
+            'Upgrade-Insecure-Requests': '1'
+          }
+        });
+
+        if (!response.ok) {
+          throw new Error(`Failed to fetch page: ${response.statusText}`);
+        }
+
+        const html = await response.text();
         const jsonData: Record<string, any> = {};
+
+        // Split HTML into script tags
+        const scriptTags = html.split('<script>');
         
-        $('script').each((index, script) => {
-          const content = $(script).html() || '';
-          
+        for (const script of scriptTags) {
           // Look for common patterns of JSON data in script tags
           const patterns = [
-            /window\.([A-Za-z0-9_]+)\s*=\s*(\{.*?\});/gs,
-            /var\s+([A-Za-z0-9_]+)\s*=\s*(\{.*?\});/gs,
-            /const\s+([A-Za-z0-9_]+)\s*=\s*(\{.*?\});/gs,
-            /let\s+([A-Za-z0-9_]+)\s*=\s*(\{.*?\});/gs,
-            /__NEXT_DATA__\s*=\s*(\{.*?\})/gs,
-            /__PRELOADED_STATE__\s*=\s*(\{.*?\})/gs
+            /window\.([A-Za-z0-9_]+)\s*=\s*(\{.*?\});/,
+            /var\s+([A-Za-z0-9_]+)\s*=\s*(\{.*?\});/,
+            /const\s+([A-Za-z0-9_]+)\s*=\s*(\{.*?\});/,
+            /let\s+([A-Za-z0-9_]+)\s*=\s*(\{.*?\});/,
+            /__NEXT_DATA__\s*=\s*(\{.*?\})/,
+            /__PRELOADED_STATE__\s*=\s*(\{.*?\})/
           ];
-          
+
           for (const pattern of patterns) {
-            let match;
-            while ((match = pattern.exec(content)) !== null) {
+            const match = script.match(pattern);
+            if (match) {
               try {
-                const varName = match[1] || `anonymousJson${index}`;
+                const varName = match[1] || `anonymousJson${Object.keys(jsonData).length}`;
                 const jsonStr = match[2] || match[1];
-                const parsed = JSON.parse(jsonStr);
-                jsonData[varName] = parsed;
+                
+                // Use bracket counting to find complete JSON
+                let bracketCount = 0;
+                let jsonEnd = 0;
+                let foundStart = false;
+                
+                for (let i = 0; i < jsonStr.length; i++) {
+                  const char = jsonStr[i];
+                  if (char === '{') {
+                    bracketCount++;
+                    foundStart = true;
+                  } else if (char === '}') {
+                    bracketCount--;
+                    if (foundStart && bracketCount === 0) {
+                      jsonEnd = i + 1;
+                      break;
+                    }
+                  }
+                }
+                
+                if (jsonEnd > 0) {
+                  const completeJson = jsonStr.substring(0, jsonEnd);
+                  const parsed = JSON.parse(completeJson);
+                  jsonData[varName] = parsed;
+                }
               } catch (e) {
                 // Skip invalid JSON
+                continue;
               }
             }
           }
-        });
-        
+        }
+
         return NextResponse.json({
           url,
           detectedSite: detectSiteFromUrl(url),
           extractedData: jsonData
         });
-      } catch (error) {
+      } catch (error: unknown) {
         console.error('Error in explore mode:', error);
         return NextResponse.json(
-          { error: 'Failed to explore property data', details: error.message },
+          { error: 'Failed to explore property data', details: error instanceof Error ? error.message : 'Unknown error' },
           { status: 500 }
         );
       }
@@ -166,10 +281,10 @@ export async function POST(request: Request) {
         lastScraped: Date.now()
       });
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error in scrape-property API route:', error);
     return NextResponse.json(
-      { error: 'Failed to scrape property', details: error.message },
+      { error: 'Failed to scrape property', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
