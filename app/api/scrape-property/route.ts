@@ -50,59 +50,97 @@ interface PageModel {
 }
 
 // Helper function to extract JSON from script tags
-const extractJsonFromHtml = (html: string, jsonVariableName: string = 'PAGE_MODEL'): PageModel | null => {
-  try {
-    const $ = cheerio.load(html);
-    let jsonData: PageModel | null = null;
+const extractJsonFromHtml = (html: string): Record<string, any> => {
+  const jsonData: Record<string, any> = {};
+  const $ = cheerio.load(html);
+  
+  // 1. Look for JSON-LD data
+  $('script[type="application/ld+json"]').each((_, script) => {
+    try {
+      const content = $(script).html();
+      if (content) {
+        const json = JSON.parse(content);
+        jsonData['jsonLd'] = json;
+      }
+    } catch (e) {
+      // Skip invalid JSON
+    }
+  });
+
+  // 2. Look for application/json scripts
+  $('script[type="application/json"]').each((_, script) => {
+    try {
+      const content = $(script).html();
+      if (content) {
+        const json = JSON.parse(content);
+        jsonData['applicationJson'] = json;
+      }
+    } catch (e) {
+      // Skip invalid JSON
+    }
+  });
+
+  // 3. Look for common variable assignments that might contain JSON
+  $('script').each((_, script) => {
+    const content = $(script).html() || '';
     
-    $('script').each((_, script) => {
-      const content = $(script).html() || '';
-      
-      // Find the script containing our target variable
-      if (content.includes(`window.${jsonVariableName}`)) {
-        const pageModelStart = content.indexOf(`window.${jsonVariableName} =`);
-        if (pageModelStart === -1) return;
-        
-        // Find the end of the JSON object by counting brackets
-        let bracketCount = 0;
-        let jsonEnd = pageModelStart;
-        let foundStart = false;
-        
-        for (let i = pageModelStart; i < content.length; i++) {
-          const char = content[i];
-          if (char === '{') {
-            bracketCount++;
-            foundStart = true;
-          } else if (char === '}') {
-            bracketCount--;
-            if (foundStart && bracketCount === 0) {
-              jsonEnd = i + 1;
-              break;
-            }
-          }
-        }
-        
-        if (jsonEnd === pageModelStart) return;
-        
-        const jsonStr = content.substring(
-          pageModelStart + `window.${jsonVariableName} =`.length,
-          jsonEnd
-        ).trim();
-        
+    // Common patterns for JSON data in scripts
+    const patterns = [
+      // window.__INITIAL_STATE__ = {...}
+      /window\.__INITIAL_STATE__\s*=\s*({[\s\S]*?});/,
+      // window.PAGE_MODEL = {...}
+      /window\.PAGE_MODEL\s*=\s*({[\s\S]*?});/,
+      // var data = {...}
+      /var\s+data\s*=\s*({[\s\S]*?});/,
+      // const data = {...}
+      /const\s+data\s*=\s*({[\s\S]*?});/,
+      // let data = {...}
+      /let\s+data\s*=\s*({[\s\S]*?});/,
+      // window.data = {...}
+      /window\.data\s*=\s*({[\s\S]*?});/,
+      // dataLayer.push({...})
+      /dataLayer\.push\(({[\s\S]*?})\);/,
+      // __PRELOADED_STATE__ = {...}
+      /__PRELOADED_STATE__\s*=\s*({[\s\S]*?});/,
+      // window.__PRELOADED_STATE__ = {...}
+      /window\.__PRELOADED_STATE__\s*=\s*({[\s\S]*?});/,
+      // window.__INITIAL_DATA__ = {...}
+      /window\.__INITIAL_DATA__\s*=\s*({[\s\S]*?});/,
+      // window.__APOLLO_STATE__ = {...}
+      /window\.__APOLLO_STATE__\s*=\s*({[\s\S]*?});/
+    ];
+
+    patterns.forEach((pattern, index) => {
+      const match = content.match(pattern);
+      if (match) {
         try {
-          jsonData = JSON.parse(jsonStr) as PageModel;
-          return false; // Break the loop once we find it
+          const jsonStr = match[1];
+          // Clean up the JSON string by removing any trailing commas
+          const cleanJsonStr = jsonStr.replace(/,(\s*[}\]])/g, '$1');
+          const json = JSON.parse(cleanJsonStr);
+          jsonData[`pattern_${index}`] = json;
         } catch (e) {
-          // Continue looking if this wasn't valid JSON
+          // Skip invalid JSON
         }
       }
     });
-    
-    return jsonData;
-  } catch (error) {
-    console.error('Error extracting JSON from HTML:', error);
-    return null;
-  }
+
+    // Look for any object-like structures that might be JSON
+    const objectMatches = content.match(/({[^{}]*({[^{}]*})*[^{}]*})/g) || [];
+    objectMatches.forEach((match, index) => {
+      try {
+        const json = JSON.parse(match);
+        // Only include if it looks like meaningful data (has more than 2 properties)
+        if (Object.keys(json).length > 2) {
+          jsonData[`object_${index}`] = json;
+        }
+      } catch (e) {
+        // Skip invalid JSON
+      }
+    });
+  });
+
+  return jsonData;
 };
 
 // Function to scrape Rightmove property
@@ -187,72 +225,11 @@ export async function POST(request: Request) {
         }
 
         const html = await response.text();
-        const jsonData: Record<string, any> = {};
-        const scriptContents: Array<{index: number, content: string, length: number}> = [];
-
-        // Properly extract script tags using regex
-        const scriptRegex = /<script[^>]*>([\s\S]*?)<\/script>/gi;
-        let match;
-        let index = 0;
-        
-        while ((match = scriptRegex.exec(html)) !== null) {
-          const content = match[1].trim();
-          if (content) {
-            scriptContents.push({
-              index: index++,
-              content,
-              length: content.length
-            });
-          }
-        }
-
-        // Process each script tag
-        for (const script of scriptContents) {
-          const { content, index } = script;
-          
-          // Look for variable assignments
-          const varAssignments = content.match(/var\s+([A-Za-z0-9_]+)\s*=\s*([^;]+);/g) || [];
-          const constAssignments = content.match(/const\s+([A-Za-z0-9_]+)\s*=\s*([^;]+);/g) || [];
-          const letAssignments = content.match(/let\s+([A-Za-z0-9_]+)\s*=\s*([^;]+);/g) || [];
-          const windowAssignments = content.match(/window\.([A-Za-z0-9_]+)\s*=\s*([^;]+);/g) || [];
-
-          // Process each type of assignment
-          const processAssignments = (assignments: string[], prefix: string) => {
-            assignments.forEach(assignment => {
-              const match = assignment.match(new RegExp(`${prefix}\\s+([A-Za-z0-9_]+)\\s*=\\s*([^;]+);`));
-              if (match) {
-                const [_, varName, value] = match;
-                try {
-                  // Try to parse as JSON if it looks like an object
-                  if (value.trim().startsWith('{') || value.trim().startsWith('[')) {
-                    const jsonValue = JSON.parse(value);
-                    jsonData[`${prefix}_${varName}`] = jsonValue;
-                  } else {
-                    // Store as string if not JSON
-                    jsonData[`${prefix}_${varName}`] = value;
-                  }
-                } catch (e) {
-                  // Store as string if parsing fails
-                  jsonData[`${prefix}_${varName}`] = value;
-                }
-              }
-            });
-          };
-
-          processAssignments(varAssignments, 'var');
-          processAssignments(constAssignments, 'const');
-          processAssignments(letAssignments, 'let');
-          processAssignments(windowAssignments, 'window');
-        }
+        const jsonData = extractJsonFromHtml(html);
 
         return NextResponse.json({
           url,
           detectedSite: detectSiteFromUrl(url),
-          scriptContents: scriptContents.map(s => ({
-            index: s.index,
-            preview: s.content.substring(0, 200),
-            length: s.length
-          })),
           extractedData: jsonData
         });
       } catch (error: unknown) {
