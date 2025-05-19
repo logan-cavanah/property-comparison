@@ -169,9 +169,9 @@ export default function Home() {
               {unrankedProperties.map((property) => (
                 <li key={property.id} className="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg">
                   <div>
-                    <span className="text-sm font-medium text-gray-900">
+                    <Link href={`/property/${property.id}`} className="text-sm font-medium text-gray-900 hover:text-blue-600">
                       {property.site}: {property.propertyId}
-                    </span>
+                    </Link>
                     <p className="text-sm text-gray-500">Added by {property.addedBy}</p>
                   </div>
                   <div className="flex items-center space-x-2">
@@ -221,9 +221,9 @@ export default function Home() {
                         {item.rank === 2 && <Trophy className="text-gray-400 mr-2" size={18} />}
                         {item.rank === 3 && <Trophy className="text-yellow-700 mr-2" size={18} />}
                         <div>
-                          <span className="text-sm font-medium text-gray-900">
+                          <Link href={`/property/${item.id}`} className="text-sm font-medium text-gray-900 hover:text-blue-600">
                             {item.rank}. {property ? `${property.site}: ${property.propertyId}` : 'Unknown Property'}
-                          </span>
+                          </Link>
                           {property && <p className="text-sm text-gray-500">Added by {property.addedBy}</p>}
                         </div>
                       </div>

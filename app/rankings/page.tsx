@@ -92,9 +92,9 @@ export default function Rankings() {
                     </div>
                   </td>
                   <td className="px-6 py-4">
-                    <div className="text-sm font-medium text-gray-900">
+                    <Link href={`/property/${item.property.id}`} className="text-sm font-medium text-gray-900 hover:text-blue-600">
                       {item.property.site}: {item.property.propertyId}
-                    </div>
+                    </Link>
                     <div className="text-sm text-gray-500">
                       Added by {item.property.addedBy}
                     </div>

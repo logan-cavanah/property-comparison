@@ -6,6 +6,29 @@ export interface Property {
   addedAt: number;
   site: string;
   propertyId: string;
+  // New fields for detailed property information
+  title?: string;
+  description?: string;
+  price?: number;
+  priceFrequency?: string; // weekly, monthly, etc.
+  bedrooms?: number;
+  bathrooms?: number;
+  postcode?: string;
+  address?: string;
+  propertyType?: string; // flat, house, etc.
+  furnished?: string; // fully, partially, unfurnished
+  availableFrom?: string;
+  deposit?: number;
+  agentName?: string;
+  agentPhone?: string;
+  agentEmail?: string;
+  features?: string[]; // array of property features
+  images?: string[]; // array of image URLs
+  floorArea?: number;
+  floorAreaUnit?: string; // sq ft, sq m
+  lastScraped?: number; // timestamp
+  latitude?: number;
+  longitude?: number;
 }
 
 
