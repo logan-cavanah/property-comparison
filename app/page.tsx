@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Plus, Trophy, RefreshCw, AlertCircle, Home, Bed, Bath, PoundSterling, MapPin } from 'lucide-react';
+import { Plus, Trophy, RefreshCw, AlertCircle, Home as HomeIcon, Bed, Bath, PoundSterling, MapPin } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/lib/AuthContext';
 import { signOut } from 'firebase/auth';
@@ -179,7 +179,7 @@ export default function Home() {
                         />
                       ) : (
                         <div className="flex items-center justify-center h-full">
-                          <Home size={48} className="text-gray-400" />
+                          <HomeIcon size={48} className="text-gray-400" />
                         </div>
                       )}
                       {property.price && (
@@ -212,7 +212,7 @@ export default function Home() {
                         )}
                         {property.propertyType && (
                           <div className="flex items-center">
-                            <Home size={14} className="mr-1" />
+                            <HomeIcon size={14} className="mr-1" />
                             <span>{property.propertyType}</span>
                           </div>
                         )}
@@ -273,7 +273,7 @@ export default function Home() {
                             />
                           ) : (
                             <div className="flex items-center justify-center h-full">
-                              <Home size={48} className="text-gray-400" />
+                              <HomeIcon size={48} className="text-gray-400" />
                             </div>
                           )}
                           {property.price && (
@@ -306,7 +306,7 @@ export default function Home() {
                             )}
                             {property.propertyType && (
                               <div className="flex items-center">
-                                <Home size={14} className="mr-1" />
+                                <HomeIcon size={14} className="mr-1" />
                                 <span>{property.propertyType}</span>
                               </div>
                             )}
