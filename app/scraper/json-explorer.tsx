@@ -1,76 +1,26 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, ChevronDown, ChevronRight } from 'lucide-react';
+import { Search, Code, FileText } from 'lucide-react';
+
+interface ScriptContent {
+  index: number;
+  preview: string;
+  length: number;
+}
 
 interface ExplorerResponse {
   url: string;
   detectedSite: string;
+  jsonContents: Array<{
+    index: number;
+    preview: string;
+    length: number;
+    type: string;
+    path: string;
+  }>;
   extractedData: Record<string, any>;
 }
-
-interface JsonViewerProps {
-  data: any;
-  name: string;
-  level?: number;
-}
-
-const JsonViewer = ({ data, name, level = 0 }: JsonViewerProps) => {
-  const [isExpanded, setIsExpanded] = useState(level === 0);
-  
-  if (data === null || data === undefined) {
-    return null;
-  }
-
-  if (typeof data !== 'object') {
-    return (
-      <div className="ml-4">
-        <span className="text-gray-600">{name}: </span>
-        <span className="text-gray-900">{String(data)}</span>
-      </div>
-    );
-  }
-
-  const isArray = Array.isArray(data);
-  const items = isArray ? data : Object.entries(data);
-  const isEmpty = items.length === 0;
-
-  return (
-    <div className={`ml-${level * 4}`}>
-      <div 
-        className="flex items-center cursor-pointer hover:bg-gray-50 py-1"
-        onClick={() => setIsExpanded(!isExpanded)}
-      >
-        {isExpanded ? (
-          <ChevronDown size={16} className="text-gray-500 mr-1" />
-        ) : (
-          <ChevronRight size={16} className="text-gray-500 mr-1" />
-        )}
-        <span className="font-medium text-gray-900">{name}</span>
-        <span className="text-gray-500 ml-2">
-          {isArray ? `[${items.length}]` : `{${items.length}}`}
-        </span>
-      </div>
-      
-      {isExpanded && !isEmpty && (
-        <div className="ml-4 border-l border-gray-200 pl-4">
-          {items.map((item, index) => {
-            const key = isArray ? index : item[0];
-            const value = isArray ? item : item[1];
-            return (
-              <JsonViewer
-                key={key}
-                data={value}
-                name={String(key)}
-                level={level + 1}
-              />
-            );
-          })}
-        </div>
-      )}
-    </div>
-  );
-};
 
 export default function JsonExplorer() {
   const [url, setUrl] = useState('');
@@ -150,13 +100,34 @@ export default function JsonExplorer() {
           </div>
 
           <div>
-            <h3 className="text-2xl font-bold text-gray-900 mb-2">Extracted JSON Data</h3>
-            <div className="bg-gray-50 p-4 rounded-lg">
-              {Object.entries(data.extractedData).map(([key, value]) => (
-                <div key={key} className="mb-4 last:mb-0">
-                  <JsonViewer data={value} name={key} />
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">Found JSON Data</h3>
+            <div className="space-y-4">
+              {data.jsonContents.map((json) => (
+                <div key={json.index} className="bg-gray-50 p-4 rounded-lg">
+                  <div className="flex items-center justify-between mb-2">
+                    <div>
+                      <span className="font-bold text-gray-900">JSON #{json.index + 1}</span>
+                      <span className="ml-2 text-sm text-gray-600">({json.type})</span>
+                    </div>
+                    <span className="text-sm text-gray-600">{json.length} characters</span>
+                  </div>
+                  <div className="text-sm text-gray-600 mb-2">
+                    <strong>Found in:</strong> {json.path}
+                  </div>
+                  <pre className="bg-gray-100 p-3 rounded text-sm overflow-x-auto text-gray-900">
+                    {json.preview}
+                  </pre>
                 </div>
               ))}
+            </div>
+          </div>
+
+          <div>
+            <h3 className="text-2xl font-bold text-gray-900 mb-2">Extracted Data</h3>
+            <div className="bg-gray-50 p-4 rounded-lg">
+              <pre className="bg-gray-100 p-3 rounded text-sm overflow-x-auto text-gray-900">
+                {JSON.stringify(data.extractedData, null, 2)}
+              </pre>
             </div>
           </div>
         </div>
