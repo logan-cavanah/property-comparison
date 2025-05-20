@@ -1,14 +1,41 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { addProperty, extractPropertyInfo } from '@/lib/utils';
 import toast, { Toaster } from 'react-hot-toast';
 import { AlertCircle, CheckCircle } from 'lucide-react';
+import { useAuth } from '@/lib/AuthContext';
+import { useRouter } from 'next/navigation';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { User } from '@/lib/types';
 
 export default function AddProperty() {
+  const { user } = useAuth();
+  const router = useRouter();
   const [url, setUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState('');
+  const [userDisplayName, setUserDisplayName] = useState<string>('');
+
+  useEffect(() => {
+    const fetchUserDisplayName = async () => {
+      if (!user) return;
+      
+      try {
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        if (userDoc.exists()) {
+          const userData = userDoc.data() as User;
+          setUserDisplayName(userData.displayName);
+        }
+      } catch (error) {
+        console.error('Error fetching user display name:', error);
+      }
+    };
+
+    fetchUserDisplayName();
+  }, [user]);
 
   // Function to normalize URL for preview
   const normalizeUrl = (input: string) => {
@@ -60,9 +87,20 @@ export default function AddProperty() {
       return;
     }
 
+    if (!user) {
+      toast.error('Please sign in to add properties');
+      router.push('/login');
+      return;
+    }
+
+    if (!userDisplayName) {
+      toast.error('Unable to get user information. Please try again.');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      await addProperty(url, 'anonymous-user');
+      await addProperty(url, userDisplayName);
       setUrl('');
       setPreviewUrl('');
       toast.success('Property added successfully!');
@@ -81,70 +119,72 @@ export default function AddProperty() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <Toaster position="top-center" />
-      <h1 className="text-3xl font-bold mb-6">Add Property</h1>
-      
-      <div className="bg-white p-6 rounded-lg shadow-md">
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label htmlFor="url" className="block text-sm font-medium text-gray-700 mb-2">
-              Property URL
-            </label>
-            <input
-              type="url"
-              id="url"
-              value={url}
-              onChange={handleUrlChange}
-              placeholder="https://www.rightmove.co.uk/properties/..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              required
-            />
-            
-            {previewUrl && previewUrl !== url && (
-              <div className="mt-2 p-3 bg-blue-50 rounded-md">
-                <p className="text-sm text-blue-800 flex items-center">
-                  <CheckCircle className="w-4 h-4 mr-2" />
-                  URL will be cleaned to: <span className="font-medium ml-1">{previewUrl}</span>
-                </p>
-                {(() => {
-                  const info = extractPropertyInfo(previewUrl);
-                  return (
-                    <p className="text-sm text-blue-600 mt-1">
-                      Will appear as: "{info.site}: {info.propertyId}"
-                    </p>
-                  );
-                })()}
-              </div>
-            )}
-          </div>
-          
-          <button
-            type="submit"
-            disabled={isLoading}
-            className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-          >
-            {isLoading ? (
-              <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                Adding...
-              </>
-            ) : (
-              'Add Property'
-            )}
-          </button>
-        </form>
+    <ProtectedRoute>
+      <div className="max-w-2xl mx-auto">
+        <Toaster position="top-center" />
+        <h1 className="text-3xl font-bold mb-6">Add Property</h1>
         
-        <div className="mt-6 text-sm text-gray-600">
-          <p className="font-medium mb-2">How URL normalization works:</p>
-          <ul className="list-disc list-inside space-y-1">
-            <li>Removes tracking parameters</li>
-            <li>Extracts only the essential property ID</li>
-            <li>Prevents duplicate properties with different URLs</li>
-            <li>Supports Rightmove, Zoopla, and SpareRoom</li>
-          </ul>
+        <div className="bg-white p-6 rounded-lg shadow-md">
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label htmlFor="url" className="block text-sm font-medium text-gray-700 mb-2">
+                Property URL
+              </label>
+              <input
+                type="url"
+                id="url"
+                value={url}
+                onChange={handleUrlChange}
+                placeholder="https://www.rightmove.co.uk/properties/..."
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                required
+              />
+              
+              {previewUrl && previewUrl !== url && (
+                <div className="mt-2 p-3 bg-blue-50 rounded-md">
+                  <p className="text-sm text-blue-800 flex items-center">
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    URL will be cleaned to: <span className="font-medium ml-1">{previewUrl}</span>
+                  </p>
+                  {(() => {
+                    const info = extractPropertyInfo(previewUrl);
+                    return (
+                      <p className="text-sm text-blue-600 mt-1">
+                        Will appear as: "{info.site}: {info.propertyId}"
+                      </p>
+                    );
+                  })()}
+                </div>
+              )}
+            </div>
+            
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+            >
+              {isLoading ? (
+                <>
+                  <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                  Adding...
+                </>
+              ) : (
+                'Add Property'
+              )}
+            </button>
+          </form>
+          
+          <div className="mt-6 text-sm text-gray-600">
+            <p className="font-medium mb-2">How URL normalization works:</p>
+            <ul className="list-disc list-inside space-y-1">
+              <li>Removes tracking parameters</li>
+              <li>Extracts only the essential property ID</li>
+              <li>Prevents duplicate properties with different URLs</li>
+              <li>Supports Rightmove, Zoopla, and SpareRoom</li>
+            </ul>
+          </div>
         </div>
       </div>
-    </div>
+    </ProtectedRoute>
   );
 }

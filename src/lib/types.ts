@@ -31,6 +31,13 @@ export interface Property {
   longitude?: number;
 }
 
+export interface User {
+  email: string;
+  displayName: string;
+  photoURL: string | null;
+  createdAt: number;
+  lastLogin: number;
+}
 
 export interface UserComparison {
   id: string;
@@ -39,7 +46,6 @@ export interface UserComparison {
   loserId: string;
   comparedAt: number;
 }
-
 
 export interface UserRanking {
   id: string;

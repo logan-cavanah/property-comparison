@@ -2,11 +2,12 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup } from 'firebase/auth';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, GoogleAuthProvider, signInWithPopup, User as FirebaseUser } from 'firebase/auth';
 import { doc, setDoc, getDoc, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import Link from 'next/link';
 import { FcGoogle } from 'react-icons/fc';
+import { User } from '@/lib/types';
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -84,7 +85,7 @@ export default function LoginPage() {
     }
   };
 
-  const createUserDocument = async (user: any) => {
+  const createUserDocument = async (user: FirebaseUser) => {
     if (!user) return;
     
     // Reference to user document
@@ -93,16 +94,18 @@ export default function LoginPage() {
     
     // Only create a new document if it doesn't already exist
     if (!userSnap.exists()) {
-      await setDoc(userRef, {
-        email: user.email,
-        displayName: user.displayName || email.split('@')[0],
-        photoURL: user.photoURL || null,
-        createdAt: serverTimestamp(),
-        lastLogin: serverTimestamp()
-      });
+      const userData: User = {
+        email: user.email!,
+        displayName: user.displayName || user.email!.split('@')[0],
+        photoURL: user.photoURL,
+        createdAt: Date.now(),
+        lastLogin: Date.now()
+      };
+      
+      await setDoc(userRef, userData);
     } else {
       // Update last login time
-      await setDoc(userRef, { lastLogin: serverTimestamp() }, { merge: true });
+      await setDoc(userRef, { lastLogin: Date.now() }, { merge: true });
     }
   };
 

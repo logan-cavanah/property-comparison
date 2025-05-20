@@ -8,8 +8,10 @@ import {
   query, 
   where, 
   writeBatch,
+  doc,
+  getDoc
 } from 'firebase/firestore';
-import { Property } from '../types';
+import { Property, User } from '../types';
 
 export interface PropertySiteInfo {
   site: string;
@@ -79,7 +81,7 @@ async function resetAllUserRankings() {
   await batch.commit();
 }
 
-export async function addProperty(url: string, userId: string): Promise<string> {
+export async function addProperty(url: string, displayName: string): Promise<string> {
   try {
     const normalizedUrl = normalizePropertyUrl(url);
     const propertyInfo = extractPropertyInfo(normalizedUrl);
@@ -98,7 +100,7 @@ export async function addProperty(url: string, userId: string): Promise<string> 
     // Add the property
     const docRef = await addDoc(collection(db, 'properties'), {
       url: normalizedUrl,
-      addedBy: userId,
+      addedBy: displayName,
       addedAt: Date.now(),
       site: propertyInfo.site,
       propertyId: propertyInfo.propertyId
