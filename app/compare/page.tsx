@@ -7,7 +7,7 @@ import toast, { Toaster } from 'react-hot-toast';
 import { ExternalLink, Trophy, CheckCircle, ArrowRight, RefreshCw, Bed, Bath, Home, PoundSterling, MapPin, Calendar, Info } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useRouter } from 'next/navigation';
-import PropertyMap from '@/components/PropertyMap';  // Add this import to reuse the map component
+import PropertyMap from '../components/PropertyMap';
 import DOMPurify from 'dompurify';
 
 export default function Compare() {

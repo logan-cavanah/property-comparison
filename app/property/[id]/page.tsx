@@ -218,12 +218,10 @@ export default function PropertyDetails() {
             <h3 className="font-bold mb-2 text-gray-900">Description</h3>
             <div className="bg-gray-50 p-4 rounded-lg mb-6">
               {property.description ? (
-                {/* Replace the original <p> with a sanitized div for HTML rendering */}
                 <div 
                   className="text-gray-800 whitespace-pre-line"
                   dangerouslySetInnerHTML={sanitizeHtml(property.description)}
                 />
-                {/* Removed: <p className="text-gray-800 whitespace-pre-line">{property.description}</p> */}
               ) : (
                 <p className="text-gray-600 italic">No description available</p>
               )}
