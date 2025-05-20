@@ -9,6 +9,7 @@ import { auth, db } from '@/lib/firebase';
 import { doc, getDoc, updateDoc, setDoc, collection, getDocs, query, where, deleteDoc, addDoc } from 'firebase/firestore';
 import { User, Group, Invitation } from '@/lib/types';
 import { AlertCircle, Check, X, UserPlus, Users, MapPin, LogOut, User as UserIcon } from 'lucide-react';
+import AddressInput from '../components/AddressInput';
 
 export default function Settings() {
   const { user } = useAuth();
@@ -17,11 +18,13 @@ export default function Settings() {
   // User profile state
   const [displayName, setDisplayName] = useState('');
   const [workplaceAddress, setWorkplaceAddress] = useState('');
+  const [isAddressValid, setIsAddressValid] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [saveMessage, setSaveMessage] = useState({ type: '', message: '' });
   
   // Group state
   const [userGroup, setUserGroup] = useState<Group | null>(null);
+  const [groupMembers, setGroupMembers] = useState<(User & { id: string })[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [isCreatingGroup, setIsCreatingGroup] = useState(false);
   const [newGroupName, setNewGroupName] = useState('');
@@ -52,6 +55,19 @@ export default function Settings() {
             ...groupsSnapshot.docs[0].data()
           } as Group;
           setUserGroup(groupData);
+
+          // Fetch group members' information
+          const memberPromises = groupData.members.map(memberId => 
+            getDoc(doc(db, 'users', memberId))
+          );
+          const memberDocs = await Promise.all(memberPromises);
+          const members = memberDocs
+            .filter(doc => doc.exists())
+            .map(doc => ({
+              id: doc.id,
+              ...doc.data()
+            } as User & { id: string }));
+          setGroupMembers(members);
         }
         
         // Fetch invitations
@@ -82,6 +98,11 @@ export default function Settings() {
   const handleSaveProfile = async () => {
     if (!user) return;
     
+    if (!isAddressValid) {
+      setSaveMessage({ type: 'error', message: 'Please select a valid workplace address from the suggestions.' });
+      return;
+    }
+    
     setIsSaving(true);
     setSaveMessage({ type: '', message: '' });
     
@@ -107,8 +128,22 @@ export default function Settings() {
     setIsCreatingGroup(true);
     
     try {
-      // Generate a random 6-character invitation code
-      const invitationCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      let invitationCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      let isUnique = false;
+      
+      // Keep generating codes until we find a unique one
+      while (!isUnique) {
+        // Generate a random 6-character invitation code
+        invitationCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+        
+        // Check if this code already exists
+        const existingGroupsQuery = query(collection(db, 'groups'), where('invitationCode', '==', invitationCode));
+        const existingGroupsSnapshot = await getDocs(existingGroupsQuery);
+        
+        if (existingGroupsSnapshot.empty) {
+          isUnique = true;
+        }
+      }
       
       // Create the new group
       const groupRef = await addDoc(collection(db, 'groups'), {
@@ -203,13 +238,20 @@ export default function Settings() {
     if (!user) return;
     
     try {
-      // Remove the invitation
-      await deleteDoc(doc(db, `users/${user.uid}/invitations`, invitation.id));
-      
-      // Update local state
-      setInvitations(invitations.filter(inv => inv.id !== invitation.id));
-      
       if (accept) {
+        // Delete all pending invitations
+        const invitationsRef = collection(db, `users/${user.uid}/invitations`);
+        const invitationsSnapshot = await getDocs(invitationsRef);
+        
+        // Delete all invitations in parallel
+        const deletePromises = invitationsSnapshot.docs.map(doc => 
+          deleteDoc(doc.ref)
+        );
+        await Promise.all(deletePromises);
+        
+        // Update local state to clear all invitations
+        setInvitations([]);
+        
         // Add user to the group
         const groupRef = doc(db, 'groups', invitation.groupId);
         const groupDoc = await getDoc(groupRef);
@@ -230,6 +272,12 @@ export default function Settings() {
             createdAt: groupData.createdAt
           });
         }
+      } else {
+        // If declining, just remove this specific invitation
+        await deleteDoc(doc(db, `users/${user.uid}/invitations`, invitation.id));
+        
+        // Update local state
+        setInvitations(invitations.filter(inv => inv.id !== invitation.id));
       }
     } catch (error) {
       console.error('Error handling invitation:', error);
@@ -306,21 +354,14 @@ export default function Settings() {
               <p className="mt-1 text-sm text-gray-500">Email cannot be changed</p>
             </div>
             
-            <div>
-              <label htmlFor="workplaceAddress" className="block text-sm font-medium text-gray-700 mb-1 flex items-center">
-                <MapPin className="mr-1" size={16} />
-                Workplace Address
-              </label>
-              <input
-                type="text"
-                id="workplaceAddress"
-                value={workplaceAddress}
-                onChange={(e) => setWorkplaceAddress(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
-                placeholder="Enter your workplace address"
-              />
-              <p className="mt-1 text-sm text-gray-500">This will help calculate commute times to properties</p>
-            </div>
+            <AddressInput
+              value={workplaceAddress}
+              onChange={setWorkplaceAddress}
+              onValidityChange={setIsAddressValid}
+              label="Workplace Address"
+              placeholder="Enter your workplace address"
+              helperText="This will help calculate commute times to properties"
+            />
             
             {saveMessage.message && (
               <div className={`p-3 rounded-md ${saveMessage.type === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
@@ -361,7 +402,24 @@ export default function Settings() {
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
                 <h3 className="text-lg font-semibold text-gray-900 mb-2">Your Group: {userGroup.name}</h3>
                 <p className="text-gray-700 mb-2">Invitation Code: <span className="font-mono bg-white px-2 py-1 rounded border">{userGroup.invitationCode}</span></p>
-                <p className="text-sm text-gray-600">Share this code with friends or use the email invitation below</p>
+                <p className="text-sm text-gray-600 mb-4">Share this code with friends or use the email invitation below</p>
+                
+                <div className="mt-4">
+                  <h4 className="text-sm font-medium text-gray-900 mb-2">Group Members</h4>
+                  <div className="space-y-2">
+                    {groupMembers.map(member => (
+                      <div key={member.id} className="flex items-center space-x-2 bg-white rounded-md p-2">
+                        <UserIcon size={16} className="text-gray-500" />
+                        <span className="text-sm text-gray-700">
+                          {member.displayName || member.email}
+                          {member.id === userGroup.createdBy && (
+                            <span className="ml-2 text-xs text-blue-600">(Creator)</span>
+                          )}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
               
               <div className="mb-6">
