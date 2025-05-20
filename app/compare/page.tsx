@@ -7,6 +7,8 @@ import toast, { Toaster } from 'react-hot-toast';
 import { ExternalLink, Trophy, CheckCircle, ArrowRight, RefreshCw, Bed, Bath, Home, PoundSterling, MapPin, Calendar, Info } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useRouter } from 'next/navigation';
+import PropertyMap from '@/components/PropertyMap';  // Add this import to reuse the map component
+import DOMPurify from 'dompurify';
 
 export default function Compare() {
   const { user, loading: authLoading } = useAuth();
@@ -50,6 +52,10 @@ export default function Compare() {
     return () => clearTimeout(timeout);
   }, [authLoading]);
 
+  const sanitizeHtml = (html: string) => {
+    return { __html: DOMPurify.sanitize(html) };
+  };  
+  
   const loadNextComparison = async () => {
     if (!user) return;
     
@@ -418,12 +424,28 @@ export default function Compare() {
                     </div>
                   </div>
                 </div>
+
+                {/* Add Map Section: New addition for location visualization */}
+                {property.postcode && (
+                  <div className="mb-4">
+                    <p className="text-xs text-gray-900 mb-1">Location Map</p>
+                    <PropertyMap 
+                      postcode={property.postcode} 
+                      address={property.address} 
+                    />
+                  </div>
+                )}
                 
                 {/* Description Preview */}
                 {property.description && (
                   <div className="mb-4">
                     <p className="text-xs text-gray-900 mb-1">Description</p>
-                    <p className="text-sm text-gray-900 line-clamp-3">{property.description}</p>
+                    {/* Replace the original <p> with a sanitized div for HTML rendering */}
+                    <div 
+                      className="text-sm text-gray-900 line-clamp-3"
+                      dangerouslySetInnerHTML={sanitizeHtml(property.description)}
+                    />
+                    {/* Removed: <p className="text-sm text-gray-900 line-clamp-3">{property.description}</p> */}
                   </div>
                 )}
                 

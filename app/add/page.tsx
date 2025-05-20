@@ -7,7 +7,7 @@ import { AlertCircle, CheckCircle } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { User } from '@/lib/types';
 
@@ -86,37 +86,75 @@ export default function AddProperty() {
       toast.error('Please enter a valid URL');
       return;
     }
-
+  
     if (!user) {
       toast.error('Please sign in to add properties');
       router.push('/login');
       return;
     }
-
+  
     if (!userDisplayName) {
       toast.error('Unable to get user information. Please try again.');
       return;
     }
-
+  
+    const normalizedUrl = normalizeUrl(url);  // Use existing normalization
     setIsLoading(true);
+    
     try {
-      await addProperty(url, userDisplayName);
+      // New: Call the scrape API to get detailed property data
+      const scrapeResponse = await fetch('/api/scrape-property', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url: normalizedUrl }),
+      });
+  
+      if (!scrapeResponse.ok) {
+        throw new Error('Failed to scrape property data');
+      }
+  
+      const scrapedData = await scrapeResponse.json();
+      
+      // New: Prepare full property data by merging scraped info with basics
+      const propertyData = {
+        ...scrapedData,  // Use scraped fields (e.g., description, images, price)
+        url: normalizedUrl,  // Override with normalized URL
+        addedBy: userDisplayName,
+        addedAt: new Date().toISOString(),
+        userId: user.uid,
+        site: scrapedData.site || extractPropertyInfo(normalizedUrl).site,  // Fallback to extraction
+        propertyId: scrapedData.propertyId || extractPropertyInfo(normalizedUrl).propertyId,
+      };
+  
+      // New: Save the full scraped data to Firestore (replaces addProperty)
+      const propertyRef = doc(db, 'properties', `${propertyData.site}_${propertyData.propertyId}`);
+      await setDoc(propertyRef, propertyData);
+  
+      toast.success('Property added and scraped successfully!');
       setUrl('');
       setPreviewUrl('');
-      toast.success('Property added successfully!');
+      router.push('/');  // New: Route to home page after success
     } catch (error) {
-      console.error('Error adding property:', error);
+      console.error('Error adding and scraping property:', error);
       if (error instanceof Error && error.message === 'This property already exists in the database') {
         toast.error('This property has already been added', {
           icon: <AlertCircle className="w-5 h-5 text-orange-500" />,
         });
       } else {
-        toast.error('Failed to add property. Please try again.');
+        // Fallback: If scraping fails, add basic data (optional, based on original behavior)
+        try {
+          await addProperty(url, userDisplayName);  // Call original if scrape fails
+          toast.success('Property added (scraping failed, basic info saved)');
+          router.push('/');  // Still route to home
+        } catch (fallbackError) {
+          toast.error('Failed to add property. Please try again.');
+        }
       }
     } finally {
       setIsLoading(false);
     }
   };
+  
 
   return (
     <ProtectedRoute>

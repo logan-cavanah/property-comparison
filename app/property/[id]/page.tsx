@@ -8,7 +8,7 @@ import { Property } from '@/lib/types';
 import { ExternalLink, Calendar, Home, Bed, Bath, MapPin, PoundSterling, Info, Image, Trash2 } from 'lucide-react';
 import Link from 'next/link';
 import PropertyMap from '../../components/PropertyMap';
-
+import DOMPurify from 'dompurify';
 export default function PropertyDetails() {
   const { id } = useParams();
   const router = useRouter();
@@ -16,6 +16,10 @@ export default function PropertyDetails() {
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState(0);
   const [isDeleting, setIsDeleting] = useState(false);
+
+  const sanitizeHtml = (html: string) => {
+    return { __html: DOMPurify.sanitize(html) };
+  };  
 
   useEffect(() => {
     const fetchProperty = async () => {
@@ -214,7 +218,12 @@ export default function PropertyDetails() {
             <h3 className="font-bold mb-2 text-gray-900">Description</h3>
             <div className="bg-gray-50 p-4 rounded-lg mb-6">
               {property.description ? (
-                <p className="text-gray-800 whitespace-pre-line">{property.description}</p>
+                {/* Replace the original <p> with a sanitized div for HTML rendering */}
+                <div 
+                  className="text-gray-800 whitespace-pre-line"
+                  dangerouslySetInnerHTML={sanitizeHtml(property.description)}
+                />
+                {/* Removed: <p className="text-gray-800 whitespace-pre-line">{property.description}</p> */}
               ) : (
                 <p className="text-gray-600 italic">No description available</p>
               )}

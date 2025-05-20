@@ -12,6 +12,7 @@
     "axios": "^1.9.0",
     "axois": "^0.0.1-security",
     "cheerio": "^1.0.0",
+    "dompurify": "^3.2.6",
     "firebase": "^11.7.1",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.509.0",
