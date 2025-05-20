@@ -5,8 +5,7 @@ import Link from 'next/link';
 import { Plus, Trophy, RefreshCw, AlertCircle, Home as HomeIcon, Bed, Bath, PoundSterling, MapPin } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/lib/AuthContext';
-import { signOut } from 'firebase/auth';
-import { auth, db } from '@/lib/firebase';
+import { db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { Property } from '@/lib/types';
 import { collection, getDocs, deleteDoc, doc, setDoc } from 'firebase/firestore';
@@ -64,15 +63,6 @@ export default function Home() {
 
     fetchData();
   }, [user]);
-
-  const handleSignOut = async () => {
-    try {
-      await signOut(auth);
-      router.push('/login');
-    } catch (error) {
-      console.error('Error signing out:', error);
-    }
-  };
 
   const handleDeleteProperty = async (propertyId: string) => {
     if (!confirm('Are you sure you want to delete this property?')) return;
@@ -145,12 +135,6 @@ export default function Home() {
               <span className="text-white-700 font-medium">
                 {user.displayName || user.email}
               </span>
-              <button
-                onClick={handleSignOut}
-                className="bg-gray-200 hover:bg-gray-300 text-gray-800 px-4 py-2 rounded-lg font-medium transition-colors"
-              >
-                Sign Out
-              </button>
             </div>
           )}
         </div>

@@ -37,6 +37,28 @@ export interface User {
   photoURL: string | null;
   createdAt: number;
   lastLogin: number;
+  workplaceAddress?: string; // New field for workplace address
+  updatedAt?: number;
+}
+
+// New types for group functionality
+export interface Group {
+  id: string;
+  name: string;
+  createdBy: string; // user ID of creator
+  createdAt: number;
+  members: string[]; // array of user IDs
+  invitationCode: string;
+}
+
+export interface Invitation {
+  id: string;
+  groupId: string;
+  groupName: string;
+  invitedBy: string; // user ID of inviter
+  invitedByName: string; // display name of inviter
+  invitationCode: string;
+  createdAt: number;
 }
 
 export interface UserComparison {

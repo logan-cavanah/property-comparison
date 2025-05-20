@@ -1,7 +1,7 @@
 import './globals.css';
 import { Inter } from 'next/font/google';
 import Link from 'next/link';
-import { Home, Plus, GitCompare, Trophy, Download, RefreshCw } from 'lucide-react';
+import { Home, Plus, GitCompare, Trophy, RefreshCw, Settings } from 'lucide-react';
 import { AuthProvider } from '@/lib/AuthContext';
 
 
@@ -45,6 +45,10 @@ export default function RootLayout({
               <Link href="/scraper" className="flex items-center hover:bg-blue-700 p-2 rounded">
                 <RefreshCw className="mr-1" size={20} />
                 Scraper
+              </Link>
+              <Link href="/settings" className="flex items-center hover:bg-blue-700 p-2 rounded">
+                <Settings className="mr-1" size={20} />
+                Settings
               </Link>
             </div>
           </div>
