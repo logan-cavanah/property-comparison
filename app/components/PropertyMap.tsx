@@ -2,7 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import dynamic from 'next/dynamic';
-import { MapPin } from 'lucide-react';
+import { MapPin, Train, Clock, MapPinned } from 'lucide-react';
+import { calculateRoute } from '@/lib/utils/googleMaps';
 
 // Create a wrapper component that imports the CSS
 const MapWithNoSSR = dynamic(
@@ -15,10 +16,16 @@ interface PropertyMapProps {
   address?: string;
 }
 
+interface RouteInfo {
+  duration: string;
+  distance: string;
+}
+
 export default function PropertyMap({ postcode, address }: PropertyMapProps) {
   const [coordinates, setCoordinates] = useState<[number, number] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
 
   useEffect(() => {
     const fetchCoordinates = async () => {
@@ -31,6 +38,10 @@ export default function PropertyMap({ postcode, address }: PropertyMapProps) {
         
         if (data.status === 200 && data.result) {
           setCoordinates([data.result.latitude, data.result.longitude]);
+          
+          // Calculate route to Houses of Parliament
+          const routeData = await calculateRoute(postcode);
+          setRouteInfo(routeData);
         } else {
           throw new Error('Could not find coordinates for this postcode');
         }
@@ -66,5 +77,27 @@ export default function PropertyMap({ postcode, address }: PropertyMapProps) {
     );
   }
 
-  return <MapWithNoSSR coordinates={coordinates} address={address} postcode={postcode} />;
+  return (
+    <div>
+      <MapWithNoSSR coordinates={coordinates} address={address} postcode={postcode} />
+      {routeInfo && (
+        <div className="mt-3 p-3 bg-gray-50 rounded-lg flex items-center justify-between">
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center text-gray-700">
+              <Train className="text-blue-600 mr-2" size={18} />
+              <span className="text-sm font-medium">To Parliament</span>
+            </div>
+            <div className="flex items-center text-gray-700">
+              <Clock className="text-blue-600 mr-2" size={18} />
+              <span className="text-sm">{routeInfo.duration}</span>
+            </div>
+            <div className="flex items-center text-gray-700">
+              <MapPinned className="text-blue-600 mr-2" size={18} />
+              <span className="text-sm">{routeInfo.distance}</span>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 } 
