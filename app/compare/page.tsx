@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { getNextComparisonPair, recordComparisonAndUpdateRankings, resetUserComparisonsAndRankings, getUserPairwiseRelations } from '@/lib/utils';
-import { Property } from '@/lib/types';
+import { Property, User } from '@/lib/types';
 import toast, { Toaster } from 'react-hot-toast';
 import { ExternalLink, Trophy, CheckCircle, ArrowRight, RefreshCw, Bed, Bath, Home, PoundSterling, MapPin, Calendar, Info } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
@@ -431,7 +431,8 @@ export default function Compare() {
                     <p className="text-xs text-gray-900 mb-1">Location Map</p>
                     <PropertyMap 
                       postcode={property.postcode} 
-                      address={property.address} 
+                      address={property.address}
+                      userWorkplaceAddress={user?.workplaceAddress}
                     />
                   </div>
                 )}

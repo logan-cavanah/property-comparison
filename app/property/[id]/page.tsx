@@ -9,9 +9,12 @@ import { ExternalLink, Calendar, Home, Bed, Bath, MapPin, PoundSterling, Info, I
 import Link from 'next/link';
 import PropertyMap from '../../components/PropertyMap';
 import DOMPurify from 'dompurify';
+import { useAuth } from '@/lib/AuthContext';
+
 export default function PropertyDetails() {
   const { id } = useParams();
   const router = useRouter();
+  const { user } = useAuth();
   const [property, setProperty] = useState<Property | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeImage, setActiveImage] = useState(0);
@@ -245,7 +248,11 @@ export default function PropertyDetails() {
             {property.postcode && (
               <div className="mb-6">
                 <h3 className="font-bold mb-2 text-gray-900">Location</h3>
-                <PropertyMap postcode={property.postcode} address={property.address} />
+                <PropertyMap 
+                  postcode={property.postcode} 
+                  address={property.address}
+                  userWorkplaceAddress={user?.workplaceAddress}
+                />
               </div>
             )}
             
