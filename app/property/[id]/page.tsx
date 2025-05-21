@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { doc, getDoc, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, deleteDoc, getDocs, collection } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Property } from '@/lib/types';
 import { ExternalLink, Calendar, Home, Bed, Bath, MapPin, PoundSterling, Info, Image, Trash2 } from 'lucide-react';

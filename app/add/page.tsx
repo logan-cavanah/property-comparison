@@ -7,7 +7,7 @@ import { AlertCircle, CheckCircle } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
 import { useRouter } from 'next/navigation';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import { doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, doc, getDoc, query, setDoc, getDocs, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { User } from '@/lib/types';
 
