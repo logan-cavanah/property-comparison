@@ -2,13 +2,13 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Plus, Trophy, RefreshCw, AlertCircle, Home as HomeIcon, Bed, Bath, PoundSterling, MapPin } from 'lucide-react';
+import { Plus, Trophy, RefreshCw, AlertCircle, Home as HomeIcon, Bed, Bath, PoundSterling, MapPin, Users } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useAuth } from '@/lib/AuthContext';
 import { db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
-import { Property } from '@/lib/types';
-import { collection, getDocs, deleteDoc, doc, setDoc } from 'firebase/firestore';
+import { Property, User } from '@/lib/types';
+import { collection, getDocs, deleteDoc, doc, setDoc, getDoc } from 'firebase/firestore';
 import { resetUserComparisonsAndRankings } from '@/lib/utils';
 
 export default function Home() {
@@ -18,19 +18,51 @@ export default function Home() {
   const [personalRankings, setPersonalRankings] = useState<{ id: string; rank: number }[]>([]);
   const [unrankedProperties, setUnrankedProperties] = useState<Property[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [userData, setUserData] = useState<{ groupId: string; groupName: string } | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchData = async () => {
       if (!user) return;
-
+      
       try {
-        // Fetch all properties
-        const propertiesSnapshot = await getDocs(collection(db, 'properties'));
-        const allProperties = propertiesSnapshot.docs.map(doc => ({
+        setIsLoading(true);
+        setError(null);
+        
+        // Get user's group
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        const userData = userDoc.data();
+        
+        if (!userData?.groupId) {
+          setError('You are not part of a group yet. Please join or create a group to view properties.');
+          setIsLoading(false);
+          return;
+        }
+        
+        // Get group name
+        const groupDoc = await getDoc(doc(db, 'groups', userData.groupId));
+        if (!groupDoc.exists()) {
+          console.error('Group document does not exist:', userData.groupId);
+          setError('Your group no longer exists. Please join or create a new group.');
+          setIsLoading(false);
+          return;
+        }
+        const groupData = groupDoc.data();
+        
+        setUserData({
+          groupId: userData.groupId,
+          groupName: groupData?.name || 'Your Group'
+        });
+        
+        // Get properties from user's group
+        const propertiesPath = `groups/${userData.groupId}/properties`;
+        const propertiesSnapshot = await getDocs(collection(db, propertiesPath));
+        const propertiesData = propertiesSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         } as Property));
-        setProperties(allProperties);
+        
+        setProperties(propertiesData);
 
         // Fetch personal rankings
         const rankingsSnapshot = await getDocs(collection(db, `users/${user.uid}/rankings`));
@@ -38,9 +70,9 @@ export default function Home() {
           const ranking = rankingsSnapshot.docs[0].data();
           const orderedIds = ranking.orderedPropertyIds || [];
           
-          // Filter out any property IDs that don't exist in allProperties
+          // Filter out any property IDs that don't exist in propertiesData
           const validPropertyIds = orderedIds.filter((id: string) => 
-            allProperties.some(property => property.id === id)
+            propertiesData.some(property => property.id === id)
           );
           
           setPersonalRankings(
@@ -49,13 +81,14 @@ export default function Home() {
 
           // Find unranked properties
           const rankedIds = new Set(validPropertyIds);
-          setUnrankedProperties(allProperties.filter(property => !rankedIds.has(property.id)));
+          setUnrankedProperties(propertiesData.filter(property => !rankedIds.has(property.id)));
         } else {
           // If no rankings exist, all properties are unranked
-          setUnrankedProperties(allProperties);
+          setUnrankedProperties(propertiesData);
         }
       } catch (error) {
         console.error('Error fetching data:', error);
+        setError('Failed to load properties. Please try again later.');
       } finally {
         setIsLoading(false);
       }
@@ -68,8 +101,15 @@ export default function Home() {
     if (!confirm('Are you sure you want to delete this property?')) return;
 
     try {
-      // Delete the property
-      await deleteDoc(doc(db, 'properties', propertyId));
+      // Get user's group
+      const userDoc = await getDoc(doc(db, 'users', user!.uid));
+      const userData = userDoc.data() as User;
+      if (!userData.groupId) {
+        throw new Error('User is not in a group');
+      }
+
+      // Delete the property from the group's subcollection
+      await deleteDoc(doc(db, `groups/${userData.groupId}/properties`, propertyId));
 
       // Get all users to clean up their rankings
       const usersSnapshot = await getDocs(collection(db, 'users'));
@@ -118,7 +158,26 @@ export default function Home() {
     return (
       <div className="text-center py-12">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-        <p className="mt-4 text-gray-700 font-medium">Loading...</p>
+        <p className="mt-4 text-gray-700 font-medium">Loading properties...</p>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="text-center py-12">
+        <AlertCircle className="mx-auto h-12 w-12 text-gray-400" />
+        <h3 className="mt-4 text-lg font-medium text-gray-900">No Group Found</h3>
+        <p className="mt-2 text-gray-600">You need to join or create a group to start comparing properties.</p>
+        <div className="mt-6">
+          <Link
+            href="/settings"
+            className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+          >
+            <Users className="mr-2 h-5 w-5" />
+            Go to Settings
+          </Link>
+        </div>
       </div>
     );
   }

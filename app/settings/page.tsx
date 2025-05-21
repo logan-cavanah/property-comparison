@@ -154,6 +154,12 @@ export default function Settings() {
         invitationCode
       });
       
+      // Update user's groupId
+      await updateDoc(doc(db, 'users', user.uid), {
+        groupId: groupRef.id,
+        updatedAt: Date.now()
+      });
+      
       // Update local state
       setUserGroup({
         id: groupRef.id,
@@ -260,6 +266,12 @@ export default function Settings() {
           const groupData = groupDoc.data() as Group;
           await updateDoc(groupRef, {
             members: [...groupData.members, user.uid]
+          });
+          
+          // Update user's groupId
+          await updateDoc(doc(db, 'users', user.uid), {
+            groupId: invitation.groupId,
+            updatedAt: Date.now()
           });
           
           // Update local state

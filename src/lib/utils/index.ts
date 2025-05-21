@@ -21,7 +21,7 @@ export {
 // Ranking utilities
 export {
   getCurrentUserRanking,
-  getGlobalRankings,
+  getGroupRankings,
   resetUserComparisonsAndRankings
 } from './ranking';
 

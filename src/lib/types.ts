@@ -40,6 +40,7 @@ export interface User {
   lastLogin: number;
   workplaceAddress?: string; // New field for workplace address
   updatedAt?: number;
+  groupId?: string; // ID of the group this user belongs to
 }
 
 // New types for group functionality

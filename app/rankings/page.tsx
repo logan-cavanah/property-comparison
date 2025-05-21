@@ -1,19 +1,41 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { getGlobalRankings } from '@/lib/utils';
+import { getGroupRankings } from '@/lib/utils';
 import { Property } from '@/lib/types';
 import { Trophy, Users, UserCheck, UserX, Bed, Bath, Home, PoundSterling, MapPin } from 'lucide-react';
 import Link from 'next/link';
+import { useAuth } from '@/lib/AuthContext';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 export default function Rankings() {
+  const { user } = useAuth();
   const [rankings, setRankings] = useState<{ property: Property; rank: number; score: number; rankCount: number; totalUsers: number }[]>([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [userData, setUserData] = useState<{ groupId: string; groupName: string } | null>(null);
 
   useEffect(() => {
     const loadRankings = async () => {
+      if (!user) return;
+      
       try {
-        const results = await getGlobalRankings();
+        const userDoc = await getDoc(doc(db, 'users', user.uid));
+        const userData = userDoc.data();
+        if (!userData?.groupId) {
+          throw new Error('User is not in a group');
+        }
+        
+        // Get group name
+        const groupDoc = await getDoc(doc(db, 'groups', userData.groupId));
+        const groupData = groupDoc.data();
+        
+        setUserData({
+          groupId: userData.groupId,
+          groupName: groupData?.name || 'Your Group'
+        });
+        
+        const results = await getGroupRankings(userData.groupId);
         setRankings(results);
       } catch (error) {
         console.error('Error loading rankings:', error);
@@ -23,7 +45,7 @@ export default function Rankings() {
     };
 
     loadRankings();
-  }, []);
+  }, [user]);
 
   if (isLoading) {
     return (
@@ -56,11 +78,17 @@ export default function Rankings() {
 
   return (
     <div className="max-w-6xl mx-auto px-4 py-8">
-      <h1 className="text-4xl font-extrabold mb-6 text-center text-white-900">
-        Global Property Rankings
+      <h1 className="text-4xl font-extrabold mb-2 text-center text-white-900">
+        Group Property Rankings
       </h1>
+      <div className="text-center mb-6">
+        <div className="inline-flex items-center bg-blue-100 text-blue-800 px-4 py-2 rounded-full">
+          <Users size={20} className="mr-2" />
+          <span className="font-medium">{userData?.groupName || 'Your Group'}</span>
+        </div>
+      </div>
       <p className="text-center text-gray-600 mb-8 font-medium">
-        Aggregate rankings based on all user comparisons
+        Aggregate rankings based on group member comparisons
       </p>
       
       <div className="bg-white rounded-xl shadow-lg p-6">

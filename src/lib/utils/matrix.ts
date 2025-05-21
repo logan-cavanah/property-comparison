@@ -4,8 +4,10 @@ import { db } from '../firebase';
 import { 
   collection, 
   getDocs,
+  getDoc,
+  doc,
 } from 'firebase/firestore';
-import { UserComparison } from '../types';
+import { UserComparison, User } from '../types';
 import { validateUserId } from './auth';
 
 // Helper to build a win graph from all user comparisons
@@ -96,8 +98,15 @@ export async function getUserPairwiseRelations(userId: string): Promise<{
   try {
     validateUserId(userId);
     
-    // Get all properties
-    const propertiesSnapshot = await getDocs(collection(db, 'properties'));
+    // Get user's group
+    const userDoc = await getDoc(doc(db, 'users', userId));
+    const userData = userDoc.data() as User;
+    if (!userData.groupId) {
+      throw new Error('User is not in a group');
+    }
+    
+    // Get all properties from user's group
+    const propertiesSnapshot = await getDocs(collection(db, `groups/${userData.groupId}/properties`));
     const propertyIds = propertiesSnapshot.docs.map(doc => doc.id);
     const idToPropertyId: { [docId: string]: string } = {};
     propertiesSnapshot.docs.forEach(doc => {

@@ -104,7 +104,7 @@ export default function Compare() {
   const calculateTotalComparisons = async () => {
     try {
       // For binary insertion sort, we need approximately n*log(n) comparisons
-      const response = await fetch('/api/properties/count');
+      const response = await fetch(`/api/properties/count?userId=${user?.uid}`);
       if (response.ok) {
         const { count } = await response.json();
         setTotalComparisons(Math.ceil(count * Math.log2(count)));

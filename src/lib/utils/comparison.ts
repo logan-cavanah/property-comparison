@@ -7,8 +7,9 @@ import {
   doc,
   runTransaction,
   setDoc,
+  getDoc,
 } from 'firebase/firestore';
-import { Property, UserComparison, UserRanking } from '../types';
+import { Property, UserComparison, UserRanking, User } from '../types';
 import { validateUserId, AuthError } from './auth';
 import { buildWinGraph, canReach, simulateMatrixWithComparison, getUserPairwiseRelations } from './matrix';
 import { getCurrentUserRanking } from './ranking';
@@ -65,8 +66,15 @@ async function insertPropertyWithoutComparison(
   const newOrderedIds = [...ranking.orderedPropertyIds];
   newOrderedIds.splice(position, 0, propertyId);
   
-  // Get total property count
-  const propertiesSnapshot = await getDocs(collection(db, 'properties'));
+  // Get user's group
+  const userDoc = await getDoc(doc(db, 'users', userId));
+  const userData = userDoc.data() as User;
+  if (!userData.groupId) {
+    throw new Error('User is not in a group');
+  }
+  
+  // Get total property count from user's group
+  const propertiesSnapshot = await getDocs(collection(db, `groups/${userData.groupId}/properties`));
   const totalProperties = propertiesSnapshot.size;
   
   // Update the ranking
@@ -85,8 +93,15 @@ export async function getNextComparisonPair(userId: string): Promise<Property[] 
   try {
     validateUserId(userId);
     
-    // Get all properties
-    const propertiesSnapshot = await getDocs(collection(db, 'properties'));
+    // Get user's group
+    const userDoc = await getDoc(doc(db, 'users', userId));
+    const userData = userDoc.data() as User;
+    if (!userData.groupId) {
+      throw new Error('User is not in a group');
+    }
+    
+    // Get all properties from user's group
+    const propertiesSnapshot = await getDocs(collection(db, `groups/${userData.groupId}/properties`));
     const allProperties = propertiesSnapshot.docs.map(doc => ({
       id: doc.id,
       ...doc.data()
@@ -281,8 +296,15 @@ export async function recordComparisonAndUpdateRankings(
         }
       }
       
-      // Get total property count
-      const propertiesQuery = collection(db, 'properties');
+      // Get user's group
+      const userDoc = await getDoc(doc(db, 'users', userId));
+      const userData = userDoc.data() as User;
+      if (!userData.groupId) {
+        throw new Error('User is not in a group');
+      }
+      
+      // Get total property count from user's group
+      const propertiesQuery = collection(db, `groups/${userData.groupId}/properties`);
       const propertiesSnapshot = await getDocs(propertiesQuery);
       const totalProperties = propertiesSnapshot.size;
       const isComplete = newOrderedIds.length === totalProperties;

@@ -6,6 +6,8 @@ import {
   getDocs, 
   query,
   writeBatch,
+  getDoc,
+  doc,
 } from 'firebase/firestore';
 import { Property, UserRanking } from '../types';
 import { validateUserId, AuthError } from './auth';
@@ -28,28 +30,34 @@ export async function getCurrentUserRanking(userId: string): Promise<UserRanking
   } as UserRanking;
 }
 
-// Get global rankings using sum of ranks method
-export async function getGlobalRankings(): Promise<{ property: Property; rank: number; score: number; rankCount: number; totalUsers: number }[]> {
-  // Get all properties
-  const propertiesSnapshot = await getDocs(collection(db, 'properties'));
+// Get group rankings using sum of ranks method
+export async function getGroupRankings(groupId: string): Promise<{ property: Property; rank: number; score: number; rankCount: number; totalUsers: number }[]> {
+  // Get all properties from the specified group
+  const propertiesSnapshot = await getDocs(collection(db, `groups/${groupId}/properties`));
   const properties = new Map(
     propertiesSnapshot.docs.map(doc => [doc.id, { id: doc.id, ...doc.data() } as Property])
   );
   
-  // Get all users
-  const usersSnapshot = await getDocs(collection(db, 'users'));
-  const propertyScores = new Map<string, number[]>();
-  const totalUsers = usersSnapshot.docs.length;
+  // Get all users in this group
+  const groupDoc = await getDoc(doc(db, 'groups', groupId));
+  if (!groupDoc.exists()) {
+    throw new Error('Group not found');
+  }
+  const groupData = groupDoc.data();
+  const memberIds = groupData.members || [];
   
-  // For each user, get their rankings
-  for (const userDoc of usersSnapshot.docs) {
-    const userId = userDoc.id;
+  // Get rankings from all group members
+  const propertyScores = new Map<string, number[]>();
+  const totalUsers = memberIds.length;
+  
+  // For each group member, get their rankings
+  for (const userId of memberIds) {
     const rankingsSnapshot = await getDocs(collection(db, `users/${userId}/rankings`));
     
     rankingsSnapshot.forEach(doc => {
       const ranking = doc.data() as UserRanking;
       if (ranking.isComplete) {
-        // Only include property IDs that still exist in the properties collection
+        // Only include property IDs that exist in this group
         ranking.orderedPropertyIds
           .filter(propertyId => properties.has(propertyId))
           .forEach((propertyId, index) => {
