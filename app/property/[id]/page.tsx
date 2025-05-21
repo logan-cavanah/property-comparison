@@ -24,8 +24,11 @@ export default function PropertyDetails() {
   useEffect(() => {
     const fetchProperty = async () => {
       try {
-        const propertyDoc = await getDoc(doc(db, 'properties', id as string));
-        if (propertyDoc.exists()) {
+        // First, we need to find which group this property belongs to
+        // We'll use a utility function to help with this
+        const [groupId, propertyDoc] = await findPropertyDocument(id as string);
+        
+        if (propertyDoc && propertyDoc.exists()) {
           setProperty({ id: propertyDoc.id, ...propertyDoc.data() } as Property);
         }
       } catch (error) {
@@ -39,6 +42,29 @@ export default function PropertyDetails() {
       fetchProperty();
     }
   }, [id]);
+  
+  // Helper function to find a property document across all groups
+  const findPropertyDocument = async (propertyId: string): Promise<[string | null, any]> => {
+    try {
+      // Get all groups - in a real app this might be optimized to only search relevant groups
+      const groupsSnapshot = await getDocs(collection(db, 'groups'));
+      
+      for (const groupDoc of groupsSnapshot.docs) {
+        const groupId = groupDoc.id;
+        const propertyDoc = await getDoc(doc(db, `groups/${groupId}/properties`, propertyId));
+        
+        if (propertyDoc.exists()) {
+          return [groupId, propertyDoc];
+        }
+      }
+      
+      // If we reach here, the property wasn't found in any group
+      return [null, null];
+    } catch (error) {
+      console.error('Error finding property:', error);
+      return [null, null];
+    }
+  };
 
   const handleDelete = async () => {
     if (!confirm('Are you sure you want to delete this property? This action cannot be undone.')) {
@@ -47,7 +73,15 @@ export default function PropertyDetails() {
 
     setIsDeleting(true);
     try {
-      await deleteDoc(doc(db, 'properties', id as string));
+      // Find which group the property belongs to first
+      const [groupId, _] = await findPropertyDocument(id as string);
+      
+      if (!groupId) {
+        throw new Error('Property not found in any group');
+      }
+      
+      // Delete the property from the group's subcollection
+      await deleteDoc(doc(db, `groups/${groupId}/properties`, id as string));
       router.push('/');
     } catch (error) {
       console.error('Error deleting property:', error);

@@ -1,4 +1,3 @@
-// src/lib/types.ts
 export interface Property {
   id: string;
   url: string;
@@ -6,6 +5,8 @@ export interface Property {
   addedAt: number;
   site: string;
   propertyId: string;
+  // Property can only be added to a group, no longer standalone
+  groupId: string; // ID of the group this property belongs to
   // New fields for detailed property information
   title?: string;
   description?: string;

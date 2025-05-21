@@ -81,29 +81,31 @@ async function resetAllUserRankings() {
   await batch.commit();
 }
 
-export async function addProperty(url: string, displayName: string): Promise<string> {
+export async function addProperty(url: string, displayName: string, userId: string, groupId: string): Promise<string> {
   try {
     const normalizedUrl = normalizePropertyUrl(url);
     const propertyInfo = extractPropertyInfo(normalizedUrl);
     
-    // Check if property already exists
-    const existingQuery = query(collection(db, 'properties'), 
+    // Check if property already exists for this group
+    const existingQuery = query(collection(db, `groups/${groupId}/properties`), 
       where('site', '==', propertyInfo.site),
       where('propertyId', '==', propertyInfo.propertyId)
     );
     const existingSnapshot = await getDocs(existingQuery);
     
     if (!existingSnapshot.empty) {
-      throw new Error('This property already exists in the database');
+      throw new Error('This property already exists in the group');
     }
     
-    // Add the property
-    const docRef = await addDoc(collection(db, 'properties'), {
+    // Add the property as a subcollection of the group
+    const docRef = await addDoc(collection(db, `groups/${groupId}/properties`), {
       url: normalizedUrl,
       addedBy: displayName,
       addedAt: Date.now(),
       site: propertyInfo.site,
-      propertyId: propertyInfo.propertyId
+      propertyId: propertyInfo.propertyId,
+      groupId: groupId,
+      userId: userId
     });
     
     // Reset all user rankings since a new property was added
