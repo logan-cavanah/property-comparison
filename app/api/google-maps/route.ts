@@ -11,14 +11,13 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
-
     const response = await fetch(
       `https://routes.googleapis.com/directions/v2:computeRoutes`,
       {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'X-Goog-Api-Key': process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY!,
+          'X-Goog-Api-Key': process.env.GOOGLE_MAPS_API_KEY!,
           'X-Goog-FieldMask': 'routes.duration,routes.distanceMeters,routes.legs.steps'
         },
         body: JSON.stringify({
