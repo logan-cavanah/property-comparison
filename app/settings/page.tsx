@@ -10,6 +10,7 @@ import { doc, getDoc, updateDoc, setDoc, collection, getDocs, query, where, dele
 import { User, Group, Invitation } from '@/lib/types';
 import { AlertCircle, Check, X, UserPlus, Users, MapPin, LogOut, User as UserIcon } from 'lucide-react';
 import AddressInput from '../components/AddressInput';
+import GroupMap from '../components/GroupMap';
 
 export default function Settings() {
   const { user } = useAuth();
@@ -347,7 +348,7 @@ export default function Settings() {
                 id="displayName"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
-                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-500"
                 placeholder="Your display name"
               />
             </div>
@@ -361,7 +362,7 @@ export default function Settings() {
                 id="email"
                 value={user?.email || ''}
                 disabled
-                className="w-full px-4 py-2 border border-gray-300 rounded-md bg-gray-50"
+                className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-500"
               />
               <p className="mt-1 text-sm text-gray-500">Email cannot be changed</p>
             </div>
@@ -442,7 +443,7 @@ export default function Settings() {
                     value={inviteEmail}
                     onChange={(e) => setInviteEmail(e.target.value)}
                     placeholder="Enter email address"
-                    className="flex-grow px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-500"
                   />
                   <button
                     onClick={handleSendInvitation}
@@ -478,7 +479,7 @@ export default function Settings() {
                   value={newGroupName}
                   onChange={(e) => setNewGroupName(e.target.value)}
                   placeholder="Enter group name"
-                  className="flex-grow px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500"
+                  className="w-full px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-500"
                 />
                 <button
                   onClick={handleCreateGroup}
@@ -491,6 +492,23 @@ export default function Settings() {
             </div>
           )}
           
+          {userGroup && (
+            <div className="mb-8">
+              {/* Existing group info code */}
+              
+              {/* Add the Group Map */}
+              <div className="mt-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">Team Workplace Map</h3>
+                <p className="text-sm text-gray-700 mb-4">
+                  This map shows the workplace locations of all members in your group
+                </p>
+                <GroupMap members={groupMembers} />
+              </div>
+              
+              {/* Rest of the existing group code */}
+            </div>
+          )}
+
           {/* Invitations */}
           {invitations.length > 0 && (
             <div>

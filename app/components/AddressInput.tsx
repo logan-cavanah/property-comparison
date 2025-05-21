@@ -173,7 +173,7 @@ export default function AddressInput({
         value={value}
         onChange={handleInputChange}
         placeholder={placeholder}
-        className={`w-full px-4 py-2 border ${isValid ? 'border-green-500' : 'border-gray-300'} rounded-md focus:ring-blue-500 focus:border-blue-500`}
+        className={`w-full px-4 py-2 border ${isValid ? 'border-green-500' : 'border-gray-300'} rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900 placeholder-gray-500`}
       />
       {helperText && (
         <p className="mt-1 text-sm text-gray-500">{helperText}</p>

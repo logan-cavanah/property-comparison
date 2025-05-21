@@ -9,13 +9,6 @@ export const loader = new Loader({
   region: 'GB'
 });
 
-// Houses of Parliament coordinates
-export const HOUSES_OF_PARLIAMENT = {
-  lat: 51.499633,
-  lng: -0.124755,
-  address: 'Houses of Parliament, London SW1A 0AA'
-};
-
 // Function to create a map instance
 export const createMap = async (
   element: HTMLElement,
@@ -60,10 +53,9 @@ export const createMarker = async (
   return marker;
 };
 
-// Function to calculate route and travel time
 export const calculateRoute = async (
   origin: string,
-  destination: string = HOUSES_OF_PARLIAMENT.address
+  destination: string
 ) => {
   try {
     const response = await fetch('/api/google-maps', {
@@ -83,4 +75,4 @@ export const calculateRoute = async (
     console.error('Error calculating route:', error);
     throw error;
   }
-}; 
+};
