@@ -17,9 +17,20 @@ interface MemberLocation {
 
 export default function GroupMap({ members }: GroupMapProps) {
   const mapRef = useRef<HTMLDivElement>(null);
+  const mapInstanceRef = useRef<google.maps.Map | null>(null);
+  const markersRef = useRef<google.maps.marker.AdvancedMarkerElement[]>([]);
   const [memberLocations, setMemberLocations] = useState<MemberLocation[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  // Cleanup function for map and markers
+  const cleanupMap = () => {
+    if (mapInstanceRef.current) {
+      mapInstanceRef.current = null;
+    }
+    markersRef.current.forEach(marker => marker.map = null);
+    markersRef.current = [];
+  };
 
   useEffect(() => {
     const fetchMemberLocations = async () => {
@@ -65,6 +76,11 @@ export default function GroupMap({ members }: GroupMapProps) {
     };
     
     fetchMemberLocations();
+
+    // Cleanup function
+    return () => {
+      cleanupMap();
+    };
   }, [members]);
 
   useEffect(() => {
@@ -72,6 +88,9 @@ export default function GroupMap({ members }: GroupMapProps) {
     
     const initMap = async () => {
       try {
+        // Clean up existing map and markers
+        cleanupMap();
+        
         // Calculate center point (average of all locations)
         const center = memberLocations.reduce(
           (acc, loc) => {
@@ -84,14 +103,16 @@ export default function GroupMap({ members }: GroupMapProps) {
         );
         
         const map = await createMap(mapRef.current!, center, 10);
+        mapInstanceRef.current = map;
         
         // Create markers for each member
         for (const location of memberLocations) {
-          await createMarker(
+          const marker = await createMarker(
             location.coordinates,
             map,
             `${location.name}: ${location.address}`
           );
+          markersRef.current.push(marker);
         }
         
         // Adjust zoom to fit all markers

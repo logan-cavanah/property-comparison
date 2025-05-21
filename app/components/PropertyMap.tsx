@@ -17,6 +17,7 @@ const MapWithNoSSR = dynamic(
 interface PropertyMapProps {
   postcode: string;
   address?: string;
+  userWorkplaceAddress?: string;
 }
 
 interface RouteInfo {
@@ -24,38 +25,16 @@ interface RouteInfo {
   distance: string;
 }
 
-export default function PropertyMap({ postcode, address }: PropertyMapProps) {
+export default function PropertyMap({ postcode, address, userWorkplaceAddress }: PropertyMapProps) {
   const { user } = useAuth();
   const [coordinates, setCoordinates] = useState<[number, number] | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [routeInfo, setRouteInfo] = useState<RouteInfo | null>(null);
-  const [workplaceAddress, setWorkplaceAddress] = useState<string | null>(null);
-
-  // Fetch user's workplace address
-  useEffect(() => {
-    const fetchWorkplaceAddress = async () => {
-      if (!user) return;
-      
-      try {
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          if (userData.workplaceAddress) {
-            setWorkplaceAddress(userData.workplaceAddress);
-          }
-        }
-      } catch (err) {
-        console.error('Error fetching workplace address:', err);
-      }
-    };
-    
-    fetchWorkplaceAddress();
-  }, [user]);
 
   useEffect(() => {
     const fetchCoordinates = async () => {
-      if (!postcode || !workplaceAddress) return;
+      if (!postcode || !userWorkplaceAddress) return;
       
       try {
         setIsLoading(true);
@@ -67,8 +46,8 @@ export default function PropertyMap({ postcode, address }: PropertyMapProps) {
         if (data.status === 200 && data.result) {
           setCoordinates([data.result.latitude, data.result.longitude]);
           
-          // Calculate route to user's workplace instead of Parliament
-          const routeData = await calculateRoute(postcode, workplaceAddress);
+          // Calculate route to user's workplace
+          const routeData = await calculateRoute(postcode, userWorkplaceAddress);
           setRouteInfo(routeData);
         } else {
           throw new Error('Could not find coordinates for this postcode');
@@ -81,10 +60,10 @@ export default function PropertyMap({ postcode, address }: PropertyMapProps) {
       }
     };
 
-    if (postcode && workplaceAddress) {
+    if (postcode && userWorkplaceAddress) {
       fetchCoordinates();
     }
-  }, [postcode, workplaceAddress]);
+  }, [postcode, userWorkplaceAddress]);
 
   if (isLoading) {
     return (
@@ -94,7 +73,7 @@ export default function PropertyMap({ postcode, address }: PropertyMapProps) {
     );
   }
 
-  if (!workplaceAddress) {
+  if (!userWorkplaceAddress) {
     return (
       <div className="h-64 bg-gray-100 rounded-lg flex items-center justify-center">
         <div className="text-center">

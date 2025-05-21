@@ -33,14 +33,15 @@ export interface Property {
 }
 
 export interface User {
+  id: string;
   email: string;
-  displayName: string;
+  displayName?: string;
+  workplaceAddress?: string;
+  groupId?: string;
+  updatedAt?: number;
   photoURL: string | null;
   createdAt: number;
   lastLogin: number;
-  workplaceAddress?: string; // New field for workplace address
-  updatedAt?: number;
-  groupId?: string; // ID of the group this user belongs to
 }
 
 // New types for group functionality

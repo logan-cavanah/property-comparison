@@ -114,6 +114,21 @@ export default function Settings() {
         updatedAt: Date.now()
       });
       
+      // Refresh group members data if user is in a group
+      if (userGroup) {
+        const memberPromises = userGroup.members.map(memberId => 
+          getDoc(doc(db, 'users', memberId))
+        );
+        const memberDocs = await Promise.all(memberPromises);
+        const members = memberDocs
+          .filter(doc => doc.exists())
+          .map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          } as User & { id: string }));
+        setGroupMembers(members);
+      }
+      
       setSaveMessage({ type: 'success', message: 'Profile updated successfully!' });
     } catch (error) {
       console.error('Error updating profile:', error);
