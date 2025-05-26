@@ -42,10 +42,6 @@ export default function RootLayout({
                 <Trophy className="mr-1" size={20} />
                 Rankings
               </Link>
-              <Link href="/scraper" className="flex items-center hover:bg-blue-700 p-2 rounded">
-                <RefreshCw className="mr-1" size={20} />
-                Scraper
-              </Link>
               <Link href="/settings" className="flex items-center hover:bg-blue-700 p-2 rounded">
                 <Settings className="mr-1" size={20} />
                 Settings

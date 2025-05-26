@@ -1,9 +1,8 @@
 import { NextResponse } from 'next/server';
-import { HOUSES_OF_PARLIAMENT } from '@/lib/utils/googleMaps';
 
 export async function POST(request: Request) {
   try {
-    const { origin, destination = HOUSES_OF_PARLIAMENT.address } = await request.json();
+    const { origin, destination } = await request.json();
 
     if (!origin) {
       return NextResponse.json(
@@ -11,6 +10,14 @@ export async function POST(request: Request) {
         { status: 400 }
       );
     }
+
+    if (!destination) {
+      return NextResponse.json(
+        { error: 'Destination is required' },
+        { status: 400 }
+      );
+    }
+
     const response = await fetch(
       `https://routes.googleapis.com/directions/v2:computeRoutes`,
       {
