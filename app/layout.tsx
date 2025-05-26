@@ -1,7 +1,7 @@
 import './globals.css';
 import { Inter } from 'next/font/google';
 import Link from 'next/link';
-import { Home, Plus, GitCompare, Trophy, RefreshCw, Settings } from 'lucide-react';
+import { Home, Plus, GitCompare, Trophy, RefreshCw, Settings, Users } from 'lucide-react';
 import { AuthProvider } from '@/lib/AuthContext';
 
 
@@ -37,6 +37,10 @@ export default function RootLayout({
               <Link href="/rankings" className="flex items-center hover:bg-blue-700 px-3 py-2 rounded-lg transition-colors duration-200 font-medium">
                 <Trophy className="mr-2" size={20} />
                 Rankings
+              </Link>
+              <Link href="/group" className="flex items-center hover:bg-blue-700 px-3 py-2 rounded-lg transition-colors duration-200 font-medium">
+                <Users className="mr-2" size={20} />
+                Group
               </Link>
               <Link href="/settings" className="flex items-center hover:bg-blue-700 px-3 py-2 rounded-lg transition-colors duration-200 font-medium">
                 <Settings className="mr-2" size={20} />

@@ -37,6 +37,8 @@ export interface User {
   email: string;
   displayName?: string;
   workplaceAddress?: string;
+  workplaceLatitude?: number;
+  workplaceLongitude?: number;
   groupId?: string;
   updatedAt?: number;
   photoURL: string | null;
@@ -51,6 +53,7 @@ export interface Group {
   createdBy: string; // user ID of creator
   createdAt: number;
   members: string[]; // array of user IDs
+  admins: string[]; // array of user IDs with admin privileges
   invitationCode: string;
 }
 
