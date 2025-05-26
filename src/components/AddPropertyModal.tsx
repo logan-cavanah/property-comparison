@@ -2,18 +2,21 @@
 
 import { useState, useEffect } from 'react';
 import { addProperty, extractPropertyInfo } from '@/lib/utils';
-import toast, { Toaster } from 'react-hot-toast';
-import { AlertCircle, CheckCircle } from 'lucide-react';
+import toast from 'react-hot-toast';
+import { AlertCircle, CheckCircle, X } from 'lucide-react';
 import { useAuth } from '@/lib/AuthContext';
-import { useRouter } from 'next/navigation';
-import ProtectedRoute from '@/components/ProtectedRoute';
 import { collection, doc, getDoc, query, setDoc, getDocs, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { User } from '@/lib/types';
 
-export default function AddProperty() {
+interface AddPropertyModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSuccess: () => void;
+}
+
+export default function AddPropertyModal({ isOpen, onClose, onSuccess }: AddPropertyModalProps) {
   const { user } = useAuth();
-  const router = useRouter();
   const [url, setUrl] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [previewUrl, setPreviewUrl] = useState('');
@@ -32,7 +35,7 @@ export default function AddProperty() {
         const userDoc = await getDoc(doc(db, 'users', user.uid));
         if (userDoc.exists()) {
           const userData = userDoc.data() as User;
-          setUserDisplayName(userData.displayName);
+          setUserDisplayName(userData.displayName || '');
         }
         
         // Check if user belongs to a group
@@ -57,8 +60,19 @@ export default function AddProperty() {
       }
     };
 
-    fetchUserInfo();
-  }, [user]);
+    if (isOpen) {
+      fetchUserInfo();
+    }
+  }, [user, isOpen]);
+
+  // Reset form when modal closes
+  useEffect(() => {
+    if (!isOpen) {
+      setUrl('');
+      setPreviewUrl('');
+      setIsLoading(false);
+    }
+  }, [isOpen]);
 
   // Function to normalize URL for preview
   const normalizeUrl = (input: string) => {
@@ -112,7 +126,6 @@ export default function AddProperty() {
   
     if (!user) {
       toast.error('Please sign in to add properties');
-      router.push('/login');
       return;
     }
   
@@ -124,11 +137,10 @@ export default function AddProperty() {
     // Check if user belongs to a group
     if (!userGroup) {
       toast.error('You need to join or create a group to add properties');
-      router.push('/settings');
       return;
     }
   
-    const normalizedUrl = normalizeUrl(url);  // Use existing normalization
+    const normalizedUrl = normalizeUrl(url);
     setIsLoading(true);
     
     try {
@@ -166,14 +178,14 @@ export default function AddProperty() {
       
       // Prepare full property data by merging scraped info with basics
       const propertyData = {
-        ...scrapedData,  // Use scraped fields (e.g., description, images, price)
-        url: normalizedUrl,  // Override with normalized URL
+        ...scrapedData,
+        url: normalizedUrl,
         addedBy: userDisplayName,
         addedAt: Date.now(),
         userId: user.uid,
-        site: scrapedData.site || propertyInfo.site,  // Fallback to extraction
+        site: scrapedData.site || propertyInfo.site,
         propertyId: scrapedData.propertyId || propertyInfo.propertyId,
-        groupId: userGroup.id  // Add the group ID
+        groupId: userGroup.id
       };
   
       // Save the full scraped data to Firestore as a subcollection of the group
@@ -181,9 +193,8 @@ export default function AddProperty() {
       await setDoc(propertyRef, propertyData);
   
       toast.success('Property added and scraped successfully!');
-      setUrl('');
-      setPreviewUrl('');
-      router.push('/');  // Route to home page after success
+      onSuccess();
+      onClose();
     } catch (error) {
       console.error('Error adding and scraping property:', error);
       if (error instanceof Error && error.message === 'This property already exists in the group') {
@@ -196,10 +207,10 @@ export default function AddProperty() {
           if (userGroup) {
             await addProperty(url, userDisplayName, user.uid, userGroup.id);
             toast.success('Property added (scraping failed, basic info saved)');
-            router.push('/');
+            onSuccess();
+            onClose();
           } else {
             toast.error('You need to join or create a group to add properties');
-            router.push('/settings');
           }
         } catch (fallbackError) {
           toast.error('Failed to add property. Please try again.');
@@ -210,38 +221,46 @@ export default function AddProperty() {
     }
   };
 
+  if (!isOpen) return null;
+
   return (
-    <ProtectedRoute>
-      <div className="max-w-2xl mx-auto">
-        <Toaster position="top-center" />
-        
-        {isCheckingGroup ? (
-          <div className="text-center py-12">
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-            <p className="mt-4 text-gray-700 font-medium">Checking group membership...</p>
-          </div>
-        ) : !userGroup ? (
-          <div className="bg-white p-6 rounded-lg shadow-md text-center">
-            <h1 className="text-2xl font-bold mb-4">Group Membership Required</h1>
-            <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-md mb-6">
-              <p className="text-yellow-800">
-                You need to join or create a group before you can add properties.
-              </p>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+      <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+        <div className="flex justify-between items-center p-6 border-b">
+          <h2 className="text-2xl font-bold text-gray-900">Add Property</h2>
+          <button
+            onClick={onClose}
+            className="text-gray-400 hover:text-gray-600 transition-colors"
+          >
+            <X size={24} />
+          </button>
+        </div>
+
+        <div className="p-6">
+          {isCheckingGroup ? (
+            <div className="text-center py-12">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+              <p className="mt-4 text-gray-700 font-medium">Checking group membership...</p>
             </div>
-            <p className="text-gray-600 mb-6">
-              Properties are shared within groups, allowing everyone in your group to view and compare them.
-            </p>
-            <button
-              onClick={() => router.push('/settings')}
-              className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700"
-            >
-              Go to Settings
-            </button>
-          </div>
-        ) : (
-          <>
-            <h1 className="text-3xl font-bold mb-6">Add Property</h1>
-            <div className="bg-white p-6 rounded-lg shadow-md">
+          ) : !userGroup ? (
+            <div className="text-center">
+              <div className="bg-yellow-50 border border-yellow-200 p-4 rounded-md mb-6">
+                <p className="text-yellow-800">
+                  You need to join or create a group before you can add properties.
+                </p>
+              </div>
+              <p className="text-gray-600 mb-6">
+                Properties are shared within groups, allowing everyone in your group to view and compare them.
+              </p>
+              <button
+                onClick={onClose}
+                className="bg-blue-600 text-white px-6 py-2 rounded-md hover:bg-blue-700"
+              >
+                Close and Go to Settings
+              </button>
+            </div>
+          ) : (
+            <>
               <div className="bg-blue-50 border border-blue-200 p-3 rounded-md mb-4">
                 <p className="text-blue-800 text-sm">
                   Adding property to group: <span className="font-medium">{userGroup.name}</span>
@@ -281,20 +300,29 @@ export default function AddProperty() {
                   )}
                 </div>
                 
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="w-full bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-                >
-                  {isLoading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Adding...
-                    </>
-                  ) : (
-                    'Add Property'
-                  )}
-                </button>
+                <div className="flex space-x-3">
+                  <button
+                    type="button"
+                    onClick={onClose}
+                    className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded-md hover:bg-gray-400 transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isLoading}
+                    className="flex-1 bg-blue-600 text-white py-2 px-4 rounded-md hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
+                  >
+                    {isLoading ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                        Adding...
+                      </>
+                    ) : (
+                      'Add Property'
+                    )}
+                  </button>
+                </div>
               </form>
               
               <div className="mt-6 text-sm text-gray-600">
@@ -306,10 +334,10 @@ export default function AddProperty() {
                   <li>Supports Rightmove, Zoopla, and SpareRoom</li>
                 </ul>
               </div>
-            </div>
-          </>
-        )}
+            </>
+          )}
+        </div>
       </div>
-    </ProtectedRoute>
+    </div>
   );
 }

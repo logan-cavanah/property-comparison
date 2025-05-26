@@ -23,27 +23,23 @@ export default function RootLayout({
     <html lang="en">
       <body className={inter.className}>
         <AuthProvider>
-        <nav className="bg-blue-600 text-white p-4">
+        <nav className="bg-blue-600 text-white p-4 shadow-lg">
           <div className="max-w-6xl mx-auto flex justify-between items-center">
-            <Link href="/" className="text-xl font-bold flex items-center">
+            <Link href="/" className="text-xl font-bold flex items-center hover:bg-blue-700 px-3 py-2 rounded-lg transition-colors duration-200">
               <Home className="mr-2" size={24} />
               Property Comparison
             </Link>
-            <div className="flex space-x-4">
-              <Link href="/add" className="flex items-center hover:bg-blue-700 p-2 rounded">
-                <Plus className="mr-1" size={20} />
-                Add
-              </Link>
-              <Link href="/compare" className="flex items-center hover:bg-blue-700 p-2 rounded">
-                <GitCompare className="mr-1" size={20} />
+            <div className="flex space-x-2">
+              <Link href="/compare" className="flex items-center hover:bg-blue-700 px-3 py-2 rounded-lg transition-colors duration-200 font-medium">
+                <GitCompare className="mr-2" size={20} />
                 Compare
               </Link>
-              <Link href="/rankings" className="flex items-center hover:bg-blue-700 p-2 rounded">
-                <Trophy className="mr-1" size={20} />
+              <Link href="/rankings" className="flex items-center hover:bg-blue-700 px-3 py-2 rounded-lg transition-colors duration-200 font-medium">
+                <Trophy className="mr-2" size={20} />
                 Rankings
               </Link>
-              <Link href="/settings" className="flex items-center hover:bg-blue-700 p-2 rounded">
-                <Settings className="mr-1" size={20} />
+              <Link href="/settings" className="flex items-center hover:bg-blue-700 px-3 py-2 rounded-lg transition-colors duration-200 font-medium">
+                <Settings className="mr-2" size={20} />
                 Settings
               </Link>
             </div>

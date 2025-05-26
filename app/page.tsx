@@ -4,12 +4,14 @@ import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { Plus, Trophy, RefreshCw, AlertCircle, Home as HomeIcon, Bed, Bath, PoundSterling, MapPin, Users } from 'lucide-react';
 import ProtectedRoute from '@/components/ProtectedRoute';
+import AddPropertyModal from '@/components/AddPropertyModal';
 import { useAuth } from '@/lib/AuthContext';
 import { db } from '@/lib/firebase';
 import { useRouter } from 'next/navigation';
 import { Property, User } from '@/lib/types';
 import { collection, getDocs, deleteDoc, doc, setDoc, getDoc } from 'firebase/firestore';
 import { resetUserComparisonsAndRankings } from '@/lib/utils';
+import toast, { Toaster } from 'react-hot-toast';
 
 export default function Home() {
   const { user } = useAuth();
@@ -20,6 +22,7 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(true);
   const [userData, setUserData] = useState<{ groupId: string; groupName: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
 
   useEffect(() => {
     const fetchData = async () => {
@@ -152,6 +155,11 @@ export default function Home() {
     } catch (error) {
       console.error('Error resetting rankings:', error);
     }
+  };
+
+  const handleAddPropertySuccess = () => {
+    // Refresh the data after adding a property
+    window.location.reload();
   };
 
   if (isLoading) {
@@ -381,13 +389,23 @@ export default function Home() {
 
         {/* Add Property Button */}
         <div className="flex justify-center">
-          <Link
-            href="/add"
+          <button
+            onClick={() => setIsAddModalOpen(true)}
             className="flex items-center bg-green-600 text-white px-6 py-3 rounded-lg font-medium hover:bg-green-700 transition-colors"
           >
             <Plus size={20} className="mr-2" /> Add New Property
-          </Link>
+          </button>
         </div>
+
+        {/* Add Property Modal */}
+        <AddPropertyModal
+          isOpen={isAddModalOpen}
+          onClose={() => setIsAddModalOpen(false)}
+          onSuccess={handleAddPropertySuccess}
+        />
+
+        {/* Toast notifications */}
+        <Toaster position="top-center" />
       </div>
     </ProtectedRoute>
   );
