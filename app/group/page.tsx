@@ -28,6 +28,7 @@ export default function GroupPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [selectedMemberForAdmin, setSelectedMemberForAdmin] = useState('');
   const [isPromotingAdmin, setIsPromotingAdmin] = useState(false);
+  const [isDemotingAdmin, setIsDemotingAdmin] = useState(false);
 
   useEffect(() => {
     const fetchGroupData = async () => {
@@ -317,13 +318,13 @@ export default function GroupPage() {
     }
   };
 
-  const handlePromoteToAdmin = async () => {
-    if (!user || !userGroup || !isCreator || !selectedMemberForAdmin) return;
+  const handlePromoteToAdmin = async (memberId: string) => {
+    if (!user || !userGroup || !isCreator || memberId === userGroup.createdBy) return;
     
     setIsPromotingAdmin(true);
     
     try {
-      const updatedAdmins = [...(userGroup.admins || []), selectedMemberForAdmin];
+      const updatedAdmins = [...(userGroup.admins || []), memberId];
       
       await updateDoc(doc(db, 'groups', userGroup.id), {
         admins: updatedAdmins
@@ -334,12 +335,34 @@ export default function GroupPage() {
         ...userGroup,
         admins: updatedAdmins
       });
-      
-      setSelectedMemberForAdmin('');
     } catch (error) {
       console.error('Error promoting to admin:', error);
     } finally {
       setIsPromotingAdmin(false);
+    }
+  };
+
+  const handleDemoteAdmin = async (memberId: string) => {
+    if (!user || !userGroup || !isCreator || memberId === userGroup.createdBy) return;
+    
+    setIsDemotingAdmin(true);
+    
+    try {
+      const updatedAdmins = (userGroup.admins || []).filter(id => id !== memberId);
+      
+      await updateDoc(doc(db, 'groups', userGroup.id), {
+        admins: updatedAdmins
+      });
+      
+      // Update local state
+      setUserGroup({
+        ...userGroup,
+        admins: updatedAdmins
+      });
+    } catch (error) {
+      console.error('Error demoting admin:', error);
+    } finally {
+      setIsDemotingAdmin(false);
     }
   };
 
@@ -416,53 +439,46 @@ export default function GroupPage() {
                           </div>
                         )}
                       </div>
-                      {isAdmin && member.id !== userGroup.createdBy && member.id !== user?.uid && (
-                        <button
-                          onClick={() => handleKickMember(member.id)}
-                          className="text-red-600 hover:text-red-800 text-sm font-medium"
-                        >
-                          Remove
-                        </button>
-                      )}
+                      <div className="flex items-center space-x-2">
+                        {isCreator && member.id !== userGroup.createdBy && (
+                          <>
+                            {userGroup.admins?.includes(member.id) ? (
+                              <button
+                                onClick={() => handleDemoteAdmin(member.id)}
+                                disabled={isDemotingAdmin}
+                                className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center"
+                                title="Demote from admin"
+                              >
+                                <Shield size={16} className="mr-1" />
+                                Demote
+                              </button>
+                            ) : (
+                              <button
+                                onClick={() => handlePromoteToAdmin(member.id)}
+                                disabled={isPromotingAdmin}
+                                className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center"
+                                title="Promote to admin"
+                              >
+                                <Shield size={16} className="mr-1" />
+                                Make Admin
+                              </button>
+                            )}
+                          </>
+                        )}
+                        {isAdmin && member.id !== userGroup.createdBy && member.id !== user?.uid && (
+                          <button
+                            onClick={() => handleKickMember(member.id)}
+                            className="text-red-600 hover:text-red-800 text-sm font-medium"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
 
-              {/* Admin Management (Creator only) */}
-              {isCreator && (
-                <div className="mb-6">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-3">Admin Management</h3>
-                  <div className="flex space-x-2">
-                    <select
-                      value={selectedMemberForAdmin}
-                      onChange={(e) => setSelectedMemberForAdmin(e.target.value)}
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                    >
-                      <option value="">Select member to promote to admin</option>
-                      {groupMembers
-                        .filter(member => 
-                          member.id !== userGroup.createdBy && 
-                          !userGroup.admins?.includes(member.id)
-                        )
-                        .map(member => (
-                          <option key={member.id} value={member.id}>
-                            {member.displayName || member.email}
-                          </option>
-                        ))}
-                    </select>
-                    <button
-                      onClick={handlePromoteToAdmin}
-                      disabled={isPromotingAdmin || !selectedMemberForAdmin}
-                      className="bg-blue-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center"
-                    >
-                      <Shield size={18} className="mr-2" />
-                      {isPromotingAdmin ? 'Promoting...' : 'Make Admin'}
-                    </button>
-                  </div>
-                </div>
-              )}
-              
               {/* Invite Members */}
               {isAdmin && (
                 <div className="mb-6">
