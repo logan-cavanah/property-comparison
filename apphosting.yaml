@@ -29,8 +29,8 @@ env:
     availability:
       - BUILD
       - RUNTIME
-  - variable: GOOGLE_MAPS_API_KEY
-    secret: GOOGLE_MAPS_API_KEY_SECRET
+  - variable: GOOGLE_API_KEY
+    secret: GOOGLE_API_KEY_SECRET
   - variable: NEXT_PUBLIC_GOOGLE_MAPS_JAVASCRIPT_KEY
     value: AIzaSyBvwH41egD9P-ehdm3nIUWIAdkUrqCYPR8
     availability:
