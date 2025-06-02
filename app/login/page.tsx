@@ -95,6 +95,7 @@ export default function LoginPage() {
     // Only create a new document if it doesn't already exist
     if (!userSnap.exists()) {
       const userData: User = {
+        id: user.uid,
         email: user.email!,
         displayName: user.displayName || user.email!.split('@')[0],
         photoURL: user.photoURL,
